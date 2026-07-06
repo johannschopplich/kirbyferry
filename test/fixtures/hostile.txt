@@ -1,0 +1,38 @@
+Title: Wantalon: Curated Art Tours
+
+----
+
+Description:
+
+Prose before the trap.
+Text: [1, 2]
+More prose after.
+
+----
+
+Text: [{"content":{"text":"<p>Real content</p>"},"id":"66666666-6666-4666-8666-666666666666","isHidden":false,"type":"text"}]
+
+----
+
+Career:
+
+-
+  role: 'Lead Software Engineer'
+  company: Finanzfluss
+  description: '[{"content":{"text":"<p>Nested blocks</p>"},"id":"77777777-7777-4777-8777-777777777777","isHidden":false,"type":"text"}]'
+  file: []
+
+----
+
+Notes:
+
+\---- not a divider
+plain closing line
+
+----
+
+Body: [{"attrs":[],"columns":[{"blocks":[],"id":"88888888-8888-4888-8888-888888888888","width":"1/1"}],"id":"99999999-9999-4999-8999-999999999999"}]
+
+----
+
+Uuid: hostile0000000001

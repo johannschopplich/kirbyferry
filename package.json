@@ -1,0 +1,68 @@
+{
+  "name": "kirbyferry",
+  "type": "module",
+  "version": "0.1.0",
+  "packageManager": "pnpm@11.8.0",
+  "description": "Round-trip Kirby blocks/layout fields to editable JSON and back",
+  "author": "Johann Schopplich <hello@johannschopplich.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/johannschopplich/kirbyferry#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/johannschopplich/kirbyferry.git"
+  },
+  "bugs": {
+    "url": "https://github.com/johannschopplich/kirbyferry/issues"
+  },
+  "keywords": [
+    "kirby",
+    "kirby-cms",
+    "blocks",
+    "layout",
+    "content",
+    "json",
+    "cli"
+  ],
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "types": "./dist/index.d.mts",
+  "bin": {
+    "kirbyferry": "bin/kirbyferry.mjs"
+  },
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "node src/cli.ts",
+    "build": "tsdown",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest",
+    "test:types": "tsc --noEmit",
+    "release": "bumpp"
+  },
+  "dependencies": {
+    "ansis": "^4.3.1",
+    "citty": "^0.2.2"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^9.0.0",
+    "@types/node": "^24.13.2",
+    "bumpp": "^11.1.0",
+    "eslint": "^10.5.0",
+    "eslint-flat-config-utils": "^3.2.0",
+    "fast-check": "^4.8.0",
+    "tsdown": "^0.22.3",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  }
+}

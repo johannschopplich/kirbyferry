@@ -35,16 +35,16 @@ export async function extractFields(
     if (fieldNames.length === 0)
       continue
 
-    const output = path.join(file.folder, contentFilename(file, '.json'))
-    const outputPath = path.join(outDir, output)
+    const datasetPath = path.join(file.folder, contentFilename(file, '.json'))
+    const outputPath = path.join(outDir, datasetPath)
 
     await fsp.mkdir(path.dirname(outputPath), { recursive: true })
     await fsp.writeFile(outputPath, `${JSON.stringify(fieldMap, undefined, 2)}\n`)
-    writtenDatasets.add(output)
+    writtenDatasets.add(datasetPath)
 
     results.push({
       source: path.relative(contentRoot, file.path),
-      output,
+      output: datasetPath,
       fields: fieldNames,
     })
   }

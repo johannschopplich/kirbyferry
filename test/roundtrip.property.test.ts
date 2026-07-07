@@ -41,28 +41,28 @@ describe('round-trip properties', () => {
   it('extraction recovers exactly what Kirby-encoded content stores', () => {
     fc.assert(fc.property(blocksArbitrary, (blocks) => {
       const page = pageWith(encodeFieldValue(blocks))
-      const raw = decodeFields(page).find(field => field.name === 'Text')!
-      const parsed = parseStructuredField(raw)
-      expect(parsed?.type).toBe('blocks')
-      expect(parsed?.value).toEqual(blocks)
+      const rawField = decodeFields(page).find(field => field.name === 'Text')!
+      const parsedField = parseStructuredField(rawField)
+      expect(parsedField?.type).toBe('blocks')
+      expect(parsedField?.value).toEqual(blocks)
     }))
   })
 
   it('re-injecting an unedited value is byte-identical', () => {
     fc.assert(fc.property(blocksArbitrary, (blocks) => {
       const page = pageWith(encodeFieldValue(blocks))
-      const raw = decodeFields(page).find(field => field.name === 'Text')!
-      const parsed = parseStructuredField(raw)!
-      expect(replaceField(page, 'Text', encodeFieldValue(parsed.value))).toBe(page)
+      const rawField = decodeFields(page).find(field => field.name === 'Text')!
+      const parsedField = parseStructuredField(rawField)!
+      expect(replaceField(page, 'Text', encodeFieldValue(parsedField.value))).toBe(page)
     }))
   })
 
   it('an edited value survives inject and re-extract with surroundings untouched', () => {
-    fc.assert(fc.property(blocksArbitrary, blocksArbitrary, (blocks, edited) => {
+    fc.assert(fc.property(blocksArbitrary, blocksArbitrary, (blocks, editedBlocks) => {
       const page = pageWith(encodeFieldValue(blocks))
-      const next = replaceField(page, 'Text', encodeFieldValue(edited))!
-      const raw = decodeFields(next).find(field => field.name === 'Text')!
-      expect(parseStructuredField(raw)?.value).toEqual(edited)
+      const next = replaceField(page, 'Text', encodeFieldValue(editedBlocks))!
+      const rawField = decodeFields(next).find(field => field.name === 'Text')!
+      expect(parseStructuredField(rawField)?.value).toEqual(editedBlocks)
       expect(next.startsWith('Title: Demo\n\n----\n\nText: ')).toBe(true)
       expect(next.endsWith('\n\n----\n\nUuid: fuzz\n')).toBe(true)
     }))

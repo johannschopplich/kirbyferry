@@ -56,8 +56,8 @@ export async function injectFields(
       continue
     }
 
-    const original = content
-    const storedValues = new Map(decodeFields(original).map(field => [field.name, field.value]))
+    const originalContent = content
+    const storedValues = new Map(decodeFields(originalContent).map(field => [field.name, field.value]))
     const writtenFields: string[] = []
     const skippedFields: string[] = []
 
@@ -88,8 +88,8 @@ export async function injectFields(
       result: {
         target: path.relative(contentRoot, txtPath),
         fields: writtenFields,
-        skipped: skippedFields,
-        changed: content !== original,
+        skippedFields,
+        hasChanged: content !== originalContent,
       },
     })
   }
@@ -107,7 +107,7 @@ export async function injectFields(
   }
 
   for (const { txtPath, content, result } of pendingWrites) {
-    if (result.changed && !dryRun)
+    if (result.hasChanged && !dryRun)
       await fsp.writeFile(txtPath, content)
   }
 

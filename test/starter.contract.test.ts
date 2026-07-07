@@ -27,16 +27,16 @@ describe.skipIf(!existsSync(starterContent))('kirby-headless-starter contract', 
       const { results } = await extractFields(root, { out })
       expect(results.length).toBeGreaterThan(0)
 
-      const injected = await injectFields(root, { out })
-      for (const result of injected)
-        expect(result.changed, result.target).toBe(false)
+      const injectResults = await injectFields(root, { out })
+      for (const result of injectResults)
+        expect(result.hasChanged, result.target).toBe(false)
 
       for await (const entry of fsp.glob('**/*.txt', { cwd: starterContent })) {
-        const [original, roundTripped] = await Promise.all([
+        const [originalContent, roundTrippedContent] = await Promise.all([
           fsp.readFile(path.join(starterContent, entry), 'utf-8'),
           fsp.readFile(path.join(root, entry), 'utf-8'),
         ])
-        expect(roundTripped, entry).toBe(original)
+        expect(roundTrippedContent, entry).toBe(originalContent)
       }
     }
     finally {

@@ -94,7 +94,7 @@ export interface ExtractReport {
   /** One entry per written JSON file. */
   results: ExtractResult[]
   /** Stale dataset files removed by `clean`, relative to the output directory. */
-  cleaned: string[]
+  cleanedDatasets: string[]
 }
 
 /** Result of injecting one JSON file back into its content file. */
@@ -104,7 +104,7 @@ export interface InjectResult {
   /** Names of the fields written back. */
   fields: string[]
   /** Names present in the JSON that could not be injected. */
-  skipped: string[]
+  skippedFields: string[]
   /** Whether the content file actually changed. */
-  changed: boolean
+  hasChanged: boolean
 }

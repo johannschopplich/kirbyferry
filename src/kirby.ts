@@ -56,22 +56,22 @@ export function parseStructuredField(field: RawField): StructuredField | undefin
   if (!field.value.startsWith('['))
     return undefined
 
-  let parsed: unknown
+  let parsedValue: unknown
   try {
-    parsed = JSON.parse(field.value)
+    parsedValue = JSON.parse(field.value)
   }
   catch {
     return undefined
   }
 
-  if (!Array.isArray(parsed) || parsed.length === 0)
+  if (!Array.isArray(parsedValue) || parsedValue.length === 0)
     return undefined
 
-  if (parsed.every(isLayoutRow))
-    return { name: field.name, type: 'layout', value: parsed as LayoutRow[] }
+  if (parsedValue.every(isLayoutRow))
+    return { name: field.name, type: 'layout', value: parsedValue as LayoutRow[] }
 
-  if (parsed.every(isContentBlock))
-    return { name: field.name, type: 'blocks', value: parsed as ContentBlock[] }
+  if (parsedValue.every(isContentBlock))
+    return { name: field.name, type: 'blocks', value: parsedValue as ContentBlock[] }
 
   return undefined
 }
@@ -198,16 +198,16 @@ export async function resolveContentRoot(
   cwd: string = process.cwd(),
 ): Promise<string> {
   if (explicit) {
-    const resolved = path.resolve(cwd, explicit)
-    if (!(await isDirectory(resolved)))
-      throw new Error(`Not a directory: ${resolved}`)
-    return resolved
+    const resolvedPath = path.resolve(cwd, explicit)
+    if (!(await isDirectory(resolvedPath)))
+      throw new Error(`Not a directory: ${resolvedPath}`)
+    return resolvedPath
   }
 
   for (const candidate of CONTENT_ROOT_CANDIDATES) {
-    const resolved = path.resolve(cwd, candidate)
-    if (await isDirectory(resolved))
-      return resolved
+    const resolvedPath = path.resolve(cwd, candidate)
+    if (await isDirectory(resolvedPath))
+      return resolvedPath
   }
 
   throw new Error(

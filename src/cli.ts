@@ -143,9 +143,9 @@ function printTree(rows: [string, string][]): void {
 
 function reportExtract(report: ExtractReport, out: string): void {
   header()
-  const { results, cleaned } = report
+  const { results, cleanedDatasets } = report
 
-  if (results.length === 0 && cleaned.length === 0) {
+  if (results.length === 0 && cleanedDatasets.length === 0) {
     log.info('No blocks or layout fields found.')
     return
   }
@@ -155,8 +155,8 @@ function reportExtract(report: ExtractReport, out: string): void {
     console.log()
   }
 
-  for (const dataset of cleaned)
-    log.warn(`Removed stale dataset: ${dataset}`)
+  for (const datasetPath of cleanedDatasets)
+    log.warn(`Removed stale dataset: ${datasetPath}`)
 
   const total = results.reduce((sum, result) => sum + result.fields.length, 0)
   const target = path.relative(process.cwd(), path.resolve(out))
@@ -166,9 +166,9 @@ function reportExtract(report: ExtractReport, out: string): void {
 function reportInject(results: InjectResult[], dryRun: boolean): void {
   header()
 
-  const changedFiles = results.filter(result => result.changed)
+  const changedFiles = results.filter(result => result.hasChanged)
   const skippedFields = results.flatMap(result =>
-    result.skipped.map(name => `${result.target} ${ansis.dim('→')} ${name}`),
+    result.skippedFields.map(name => `${result.target} ${ansis.dim('→')} ${name}`),
   )
 
   if (changedFiles.length === 0 && skippedFields.length === 0) {

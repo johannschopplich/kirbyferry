@@ -113,11 +113,11 @@ describe('isStructuredFieldValue', () => {
 
 describe('encodeFieldValue', () => {
   it('escapes U+2028/U+2029 so the value stays on a single line', () => {
-    const encoded = encodeFieldValue([{ content: { text: `a${LINE_SEPARATOR}b${PARAGRAPH_SEPARATOR}c` } }])
-    expect(encoded).toContain('\\u2028')
-    expect(encoded).toContain('\\u2029')
-    expect(encoded).not.toContain(LINE_SEPARATOR)
-    expect(encoded).not.toContain(PARAGRAPH_SEPARATOR)
+    const encodedValue = encodeFieldValue([{ content: { text: `a${LINE_SEPARATOR}b${PARAGRAPH_SEPARATOR}c` } }])
+    expect(encodedValue).toContain('\\u2028')
+    expect(encodedValue).toContain('\\u2029')
+    expect(encodedValue).not.toContain(LINE_SEPARATOR)
+    expect(encodedValue).not.toContain(PARAGRAPH_SEPARATOR)
   })
 
   it('leaves slashes raw, matching Kirby json_encode', () => {
@@ -181,11 +181,11 @@ describe('extractFields', () => {
 
   it('extracts blocks fields into a mirrored field-keyed JSON tree', async () => {
     const { root, out } = workspace
-    const { results, cleaned } = await extractFields(root, { out })
+    const { results, cleanedDatasets } = await extractFields(root, { out })
 
     expect(results).toHaveLength(2)
     expect(results[0]!.fields).toEqual(['Text'])
-    expect(cleaned).toEqual([])
+    expect(cleanedDatasets).toEqual([])
 
     const dataset = JSON.parse(
       await fsp.readFile(path.join(out, 'pages', 'home', 'project.en.json'), 'utf-8'),
@@ -214,9 +214,9 @@ describe('extractFields', () => {
       await extractFields(root, { out })
       await fsp.rm(path.join(root, 'pages', 'home'), { recursive: true })
 
-      const { results, cleaned } = await extractFields(root, { out, clean: true })
+      const { results, cleanedDatasets } = await extractFields(root, { out, clean: true })
       expect(results).toEqual([])
-      expect(cleaned.sort()).toEqual([
+      expect(cleanedDatasets.sort()).toEqual([
         path.join('pages', 'home', 'project.de.json'),
         path.join('pages', 'home', 'project.en.json'),
       ])
@@ -228,8 +228,8 @@ describe('extractFields', () => {
       await extractFields(root, { out })
       await fsp.rm(path.join(root, 'pages', 'home', 'project.de.txt'))
 
-      const { cleaned } = await extractFields(root, { out, langs: ['de'], clean: true })
-      expect(cleaned).toEqual([path.join('pages', 'home', 'project.de.json')])
+      const { cleanedDatasets } = await extractFields(root, { out, langs: ['de'], clean: true })
+      expect(cleanedDatasets).toEqual([path.join('pages', 'home', 'project.de.json')])
       await expect(fsp.access(path.join(out, 'pages', 'home', 'project.en.json'))).resolves.toBeUndefined()
     })
 
@@ -239,10 +239,10 @@ describe('extractFields', () => {
       await fsp.rm(path.join(root, 'pages', 'home'), { recursive: true })
 
       const bodyScoped = await extractFields(root, { out, fields: ['Body'], clean: true })
-      expect(bodyScoped.cleaned).toEqual([])
+      expect(bodyScoped.cleanedDatasets).toEqual([])
 
       const textScoped = await extractFields(root, { out, fields: ['text'], clean: true })
-      expect(textScoped.cleaned).toHaveLength(2)
+      expect(textScoped.cleanedDatasets).toHaveLength(2)
     })
   })
 })
@@ -266,15 +266,15 @@ describe('injectFields', () => {
     await fsp.writeFile(jsonPath, JSON.stringify(dataset, undefined, 2))
 
     const results = await injectFields(root, { out, langs: ['en'] })
-    expect(results[0]!.changed).toBe(true)
+    expect(results[0]!.hasChanged).toBe(true)
     expect(results[0]!.fields).toEqual(['Text'])
 
-    const updated = await fsp.readFile(path.join(root, 'pages', 'home', 'project.en.txt'), 'utf-8')
-    expect(updated).toContain('<p>Edited</p>')
-    expect(updated).toContain('Title: Demo')
-    expect(updated).toContain('Footerlinks:')
+    const updatedContent = await fsp.readFile(path.join(root, 'pages', 'home', 'project.en.txt'), 'utf-8')
+    expect(updatedContent).toContain('<p>Edited</p>')
+    expect(updatedContent).toContain('Title: Demo')
+    expect(updatedContent).toContain('Footerlinks:')
     // Still a single minified line.
-    expect(updated).toMatch(/^Text: \[\{.*\}\]$/m)
+    expect(updatedContent).toMatch(/^Text: \[\{.*\}\]$/m)
   })
 
   it('reports the change but leaves the file unwritten in dry-run mode', async () => {
@@ -287,10 +287,10 @@ describe('injectFields', () => {
     await fsp.writeFile(jsonPath, JSON.stringify(dataset, undefined, 2))
 
     const results = await injectFields(root, { out, langs: ['en'], dryRun: true })
-    expect(results[0]!.changed).toBe(true)
+    expect(results[0]!.hasChanged).toBe(true)
 
-    const untouched = await fsp.readFile(path.join(root, 'pages', 'home', 'project.en.txt'), 'utf-8')
-    expect(untouched).not.toContain('<p>Edited</p>')
+    const untouchedContent = await fsp.readFile(path.join(root, 'pages', 'home', 'project.en.txt'), 'utf-8')
+    expect(untouchedContent).not.toContain('<p>Edited</p>')
   })
 
   it('skips a dataset key whose case does not match the field in the file', async () => {
@@ -302,8 +302,8 @@ describe('injectFields', () => {
     }))
 
     const results = await injectFields(root, { out, langs: ['en'] })
-    expect(results[0]!.skipped).toEqual(['text'])
-    expect(results[0]!.changed).toBe(false)
+    expect(results[0]!.skippedFields).toEqual(['text'])
+    expect(results[0]!.hasChanged).toBe(false)
   })
 
   it('injects an empty array to clear a field', async () => {
@@ -314,10 +314,10 @@ describe('injectFields', () => {
     await fsp.writeFile(jsonPath, JSON.stringify({ Text: [] }))
 
     const results = await injectFields(root, { out, langs: ['en'] })
-    expect(results[0]!.changed).toBe(true)
+    expect(results[0]!.hasChanged).toBe(true)
 
-    const updated = await fsp.readFile(path.join(root, 'pages', 'home', 'project.en.txt'), 'utf-8')
-    expect(updated).toMatch(/^Text: \[\]$/m)
+    const updatedContent = await fsp.readFile(path.join(root, 'pages', 'home', 'project.en.txt'), 'utf-8')
+    expect(updatedContent).toMatch(/^Text: \[\]$/m)
   })
 
   it('leaves legacy escaped-slash JSON untouched when values are unedited', async () => {
@@ -330,7 +330,7 @@ describe('injectFields', () => {
     await extractFields(root, { out })
     const results = await injectFields(root, { out, templates: ['legacy'] })
 
-    expect(results[0]!.changed).toBe(false)
+    expect(results[0]!.hasChanged).toBe(false)
     expect(results[0]!.fields).toEqual([])
     expect(await fsp.readFile(legacyPath, 'utf-8')).toBe(legacyPage)
   })
@@ -413,7 +413,7 @@ describe('round-trip fidelity', () => {
     await extractFields(root, { out })
     const results = await injectFields(root, { out })
 
-    expect(results[0]!.changed).toBe(false)
+    expect(results[0]!.hasChanged).toBe(false)
     expect(await fsp.readFile(path.join(root, pagePath), 'utf-8')).toBe(fixture)
   })
 
@@ -461,14 +461,14 @@ describe('hostile fixture (corpus-derived edge cases)', () => {
     // Body is unedited, so only Text is rewritten.
     expect(results[0]!.fields).toEqual(['Text'])
 
-    const updated = await fsp.readFile(path.join(root, pagePath), 'utf-8')
-    expect(updated).toContain('<p>Edited</p>')
+    const updatedContent = await fsp.readFile(path.join(root, pagePath), 'utf-8')
+    expect(updatedContent).toContain('<p>Edited</p>')
     // The look-alike line inside the Description field is not the Text field.
-    expect(updated).toContain('Prose before the trap.\nText: [1, 2]\nMore prose after.')
+    expect(updatedContent).toContain('Prose before the trap.\nText: [1, 2]\nMore prose after.')
     // Nested JSON-in-YAML, indented empty arrays, and escaped dividers stay put.
-    expect(updated).toContain(`description: '[{"content"`)
-    expect(updated).toContain('  file: []')
-    expect(updated).toContain('\\---- not a divider')
-    expect(updated).toContain('Title: Wantalon: Curated Art Tours')
+    expect(updatedContent).toContain(`description: '[{"content"`)
+    expect(updatedContent).toContain('  file: []')
+    expect(updatedContent).toContain('\\---- not a divider')
+    expect(updatedContent).toContain('Title: Wantalon: Curated Art Tours')
   })
 })

@@ -83,8 +83,8 @@ npx kirbyferry inject --lang de         # write it back
 import { extractFields, injectFields, resolveContentRoot } from 'kirbyferry'
 
 const contentRoot = await resolveContentRoot() // auto-detect, or pass a path
-const extracted = await extractFields(contentRoot, { out: 'content-fields', langs: ['de'] })
-const injected = await injectFields(contentRoot, { out: 'content-fields', dryRun: true })
+const extractReport = await extractFields(contentRoot, { out: 'content-fields', langs: ['de'] })
+const injectResults = await injectFields(contentRoot, { out: 'content-fields', dryRun: true })
 ```
 
 Lower-level helpers are exported too: `decodeFields`, `parseStructuredField`, `isStructuredFieldValue`, `encodeFieldValue`, `replaceField`, `parseFilename`, `findFiles`.
@@ -116,7 +116,7 @@ interface ExtractReport {
   /** One entry per written JSON file */
   results: ExtractResult[]
   /** Stale dataset files removed by `clean`, relative to the output directory */
-  cleaned: string[]
+  cleanedDatasets: string[]
 }
 ```
 

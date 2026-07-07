@@ -49,11 +49,11 @@ export async function extractFields(
     })
   }
 
-  const cleaned = clean
+  const cleanedDatasets = clean
     ? await cleanStaleDatasets(outDir, writtenDatasets, { langs, fields, templates })
     : []
 
-  return { results, cleaned }
+  return { results, cleanedDatasets }
 }
 
 /**
@@ -70,7 +70,7 @@ async function cleanStaleDatasets(
   if (!(await isDirectory(outDir)))
     return []
 
-  const cleaned: string[] = []
+  const cleanedDatasets: string[] = []
 
   for (const file of await findFiles(outDir, '.json', { langs, templates })) {
     const datasetPath = path.join(file.folder, contentFilename(file, '.json'))
@@ -91,8 +91,8 @@ async function cleanStaleDatasets(
     }
 
     await fsp.rm(file.path)
-    cleaned.push(datasetPath)
+    cleanedDatasets.push(datasetPath)
   }
 
-  return cleaned
+  return cleanedDatasets
 }

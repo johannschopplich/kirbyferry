@@ -2,7 +2,7 @@
   "name": "kirbyferry",
   "type": "module",
   "version": "0.1.0",
-  "packageManager": "pnpm@11.8.0",
+  "packageManager": "pnpm@11.10.0",
   "description": "Round-trip Kirby blocks/layout fields to editable JSON and back",
   "author": "Johann Schopplich <hello@johannschopplich.com>",
   "license": "MIT",
@@ -55,10 +55,10 @@
     "citty": "^0.2.2"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^9.0.0",
-    "@types/node": "^24.13.2",
+    "@antfu/eslint-config": "^9.1.0",
+    "@types/node": "^26.1.0",
     "bumpp": "^11.1.0",
-    "eslint": "^10.5.0",
+    "eslint": "^10.6.0",
     "eslint-flat-config-utils": "^3.2.0",
     "fast-check": "^4.8.0",
     "tsdown": "^0.22.3",

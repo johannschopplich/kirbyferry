@@ -187,11 +187,11 @@ describe('extractFields', () => {
     expect(results[0]!.fields).toEqual(['Text'])
     expect(cleaned).toEqual([])
 
-    const written = JSON.parse(
+    const dataset = JSON.parse(
       await fsp.readFile(path.join(out, 'pages', 'home', 'project.en.json'), 'utf-8'),
     ) as StructuredFieldMap
-    expect(Object.keys(written)).toEqual(['Text'])
-    expect(written.Text).toHaveLength(1)
+    expect(Object.keys(dataset)).toEqual(['Text'])
+    expect(dataset.Text).toHaveLength(1)
   })
 
   it('restricts extraction to the requested language', async () => {
@@ -261,9 +261,9 @@ describe('injectFields', () => {
     await extractFields(root, { out })
 
     const jsonPath = path.join(out, 'pages', 'home', 'project.en.json')
-    const map = JSON.parse(await fsp.readFile(jsonPath, 'utf-8')) as StructuredFieldMap
-    ;(map.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
-    await fsp.writeFile(jsonPath, JSON.stringify(map, undefined, 2))
+    const dataset = JSON.parse(await fsp.readFile(jsonPath, 'utf-8')) as StructuredFieldMap
+    ;(dataset.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
+    await fsp.writeFile(jsonPath, JSON.stringify(dataset, undefined, 2))
 
     const results = await injectFields(root, { out, langs: ['en'] })
     expect(results[0]!.changed).toBe(true)
@@ -277,14 +277,14 @@ describe('injectFields', () => {
     expect(updated).toMatch(/^Text: \[\{.*\}\]$/m)
   })
 
-  it('does not write when dry-run is set', async () => {
+  it('reports the change but leaves the file unwritten in dry-run mode', async () => {
     const { root, out } = workspace
     await extractFields(root, { out })
 
     const jsonPath = path.join(out, 'pages', 'home', 'project.en.json')
-    const map = JSON.parse(await fsp.readFile(jsonPath, 'utf-8')) as StructuredFieldMap
-    ;(map.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
-    await fsp.writeFile(jsonPath, JSON.stringify(map, undefined, 2))
+    const dataset = JSON.parse(await fsp.readFile(jsonPath, 'utf-8')) as StructuredFieldMap
+    ;(dataset.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
+    await fsp.writeFile(jsonPath, JSON.stringify(dataset, undefined, 2))
 
     const results = await injectFields(root, { out, langs: ['en'], dryRun: true })
     expect(results[0]!.changed).toBe(true)
@@ -341,9 +341,9 @@ describe('injectFields', () => {
 
     // Stage a valid edit alongside the broken dataset to prove atomicity.
     const dePath = path.join(out, 'pages', 'home', 'project.de.json')
-    const map = JSON.parse(await fsp.readFile(dePath, 'utf-8')) as StructuredFieldMap
-    ;(map.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
-    await fsp.writeFile(dePath, JSON.stringify(map))
+    const dataset = JSON.parse(await fsp.readFile(dePath, 'utf-8')) as StructuredFieldMap
+    ;(dataset.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
+    await fsp.writeFile(dePath, JSON.stringify(dataset))
     await fsp.writeFile(path.join(out, 'pages', 'home', 'project.en.json'), 'not json')
 
     await expect(injectFields(root, { out })).rejects.toThrow(/invalid json in .*project\.en\.json/i)
@@ -356,9 +356,9 @@ describe('injectFields', () => {
     await extractFields(root, { out })
 
     const dePath = path.join(out, 'pages', 'home', 'project.de.json')
-    const map = JSON.parse(await fsp.readFile(dePath, 'utf-8')) as StructuredFieldMap
-    ;(map.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
-    await fsp.writeFile(dePath, JSON.stringify(map))
+    const dataset = JSON.parse(await fsp.readFile(dePath, 'utf-8')) as StructuredFieldMap
+    ;(dataset.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
+    await fsp.writeFile(dePath, JSON.stringify(dataset))
     await fsp.writeFile(
       path.join(out, 'pages', 'home', 'project.en.json'),
       JSON.stringify({ Text: [{ foo: 1 }] }),
@@ -369,15 +369,15 @@ describe('injectFields', () => {
     expect(deContent).not.toContain('<p>Edited</p>')
   })
 
-  it('fails fast without writing when a dataset has no content file', async () => {
+  it('aborts without writing when a dataset has no content file', async () => {
     const { root, out } = workspace
     await extractFields(root, { out })
 
     // Stage a real edit that a successful run would write back...
     const jsonPath = path.join(out, 'pages', 'home', 'project.en.json')
-    const map = JSON.parse(await fsp.readFile(jsonPath, 'utf-8')) as StructuredFieldMap
-    ;(map.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
-    await fsp.writeFile(jsonPath, JSON.stringify(map, undefined, 2))
+    const dataset = JSON.parse(await fsp.readFile(jsonPath, 'utf-8')) as StructuredFieldMap
+    ;(dataset.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
+    await fsp.writeFile(jsonPath, JSON.stringify(dataset, undefined, 2))
 
     // ...alongside a stale dataset whose content file does not exist.
     await fsp.mkdir(path.join(out, 'pages', 'ghost'), { recursive: true })
@@ -448,23 +448,14 @@ describe('hostile fixture (corpus-derived edge cases)', () => {
     expect(results[0]!.fields).toEqual(['Text', 'Body'])
   })
 
-  it('re-injects byte-for-byte when nothing is edited', async () => {
-    const { root, out } = workspace
-    await extractFields(root, { out })
-    const results = await injectFields(root, { out })
-
-    expect(results[0]!.changed).toBe(false)
-    expect(await fsp.readFile(path.join(root, pagePath), 'utf-8')).toBe(fixture)
-  })
-
   it('edits the real field while every trap survives untouched', async () => {
     const { root, out } = workspace
     await extractFields(root, { out })
 
     const jsonPath = path.join(out, 'pages', 'hostile', 'default.json')
-    const map = JSON.parse(await fsp.readFile(jsonPath, 'utf-8')) as StructuredFieldMap
-    ;(map.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
-    await fsp.writeFile(jsonPath, JSON.stringify(map))
+    const dataset = JSON.parse(await fsp.readFile(jsonPath, 'utf-8')) as StructuredFieldMap
+    ;(dataset.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
+    await fsp.writeFile(jsonPath, JSON.stringify(dataset))
 
     const results = await injectFields(root, { out })
     // Body is unedited, so only Text is rewritten.

@@ -19,28 +19,28 @@ export async function injectFields(
 
   // First pass: compute every replacement in memory and collect everything that
   // blocks the run. Nothing is written until the whole tree validates.
-  const pending: { txtPath: string, content: string, result: InjectResult }[] = []
-  const problems: string[] = []
+  const pendingWrites: { txtPath: string, content: string, result: InjectResult }[] = []
+  const abortReasons: string[] = []
   let hasMissingTargets = false
 
   for (const file of await findFiles(outDir, '.json', { langs, templates })) {
-    const dataset = path.relative(outDir, file.path)
+    const datasetPath = path.relative(outDir, file.path)
 
-    let map: StructuredFieldMap
+    let fieldMap: StructuredFieldMap
     try {
-      map = JSON.parse(await fsp.readFile(file.path, 'utf-8')) as StructuredFieldMap
+      fieldMap = JSON.parse(await fsp.readFile(file.path, 'utf-8')) as StructuredFieldMap
     }
     catch (error) {
-      problems.push(`Invalid JSON in ${dataset}: ${(error as Error).message}`)
+      abortReasons.push(`Invalid JSON in ${datasetPath}: ${(error as Error).message}`)
       continue
     }
 
-    const invalidFields = Object.entries(map)
+    const invalidFields = Object.entries(fieldMap)
       .filter(([name, value]) => matchesFilter(fields, name) && !isStructuredFieldValue(value))
       .map(([name]) => name)
 
     if (invalidFields.length > 0) {
-      problems.push(`Not a blocks/layout value in ${dataset}: ${invalidFields.join(', ')}`)
+      abortReasons.push(`Not a blocks/layout value in ${datasetPath}: ${invalidFields.join(', ')}`)
       continue
     }
 
@@ -51,7 +51,7 @@ export async function injectFields(
       content = await fsp.readFile(txtPath, 'utf-8')
     }
     catch {
-      problems.push(`No content file to inject into: ${path.relative(contentRoot, txtPath)}`)
+      abortReasons.push(`No content file to inject into: ${path.relative(contentRoot, txtPath)}`)
       hasMissingTargets = true
       continue
     }
@@ -61,28 +61,28 @@ export async function injectFields(
     const writtenFields: string[] = []
     const skippedFields: string[] = []
 
-    for (const [name, fieldValue] of Object.entries(map)) {
+    for (const [name, fieldValue] of Object.entries(fieldMap)) {
       if (!matchesFilter(fields, name))
         continue
 
       // A value that still equals what the file stores is left alone byte for
       // byte – legacy PHP json_encode formatting (e.g. escaped slashes) must
       // not be normalized by a no-op inject.
-      const stored = storedValues.get(name)
-      if (stored !== undefined && isJsonEqual(stored, fieldValue))
+      const storedValue = storedValues.get(name)
+      if (storedValue !== undefined && isJsonEqual(storedValue, fieldValue))
         continue
 
-      const next = replaceField(content, name, encodeFieldValue(fieldValue))
-      if (next === undefined) {
+      const updatedContent = replaceField(content, name, encodeFieldValue(fieldValue))
+      if (updatedContent === undefined) {
         skippedFields.push(name)
         continue
       }
 
-      content = next
+      content = updatedContent
       writtenFields.push(name)
     }
 
-    pending.push({
+    pendingWrites.push({
       txtPath,
       content,
       result: {
@@ -97,23 +97,21 @@ export async function injectFields(
   // Fail fast and atomically: an invalid dataset means an edit went wrong, and
   // a dataset without a content file means the output tree is out of sync with
   // the content tree – either way, write nothing at all.
-  if (problems.length > 0) {
+  if (abortReasons.length > 0) {
     const hint = hasMissingTargets
       ? '\nRe-run extract with --clean to drop stale datasets.'
       : ''
     throw new Error(
-      `Nothing was injected:\n${problems.map(problem => `  ${problem}`).join('\n')}${hint}`,
+      `Nothing was injected:\n${abortReasons.map(reason => `  ${reason}`).join('\n')}${hint}`,
     )
   }
 
-  // Every dataset validates and every target exists, so the writes can be
-  // applied as a unit.
-  for (const { txtPath, content, result } of pending) {
+  for (const { txtPath, content, result } of pendingWrites) {
     if (result.changed && !dryRun)
       await fsp.writeFile(txtPath, content)
   }
 
-  return pending.map(item => item.result)
+  return pendingWrites.map(item => item.result)
 }
 
 function isJsonEqual(storedValue: string, value: unknown): boolean {

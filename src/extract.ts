@@ -16,41 +16,41 @@ export async function extractFields(
   const { out = DEFAULT_OUT_DIR, langs, fields, templates, clean = false } = options
   const outDir = path.resolve(out)
   const results: ExtractResult[] = []
-  const written = new Set<string>()
+  const writtenDatasets = new Set<string>()
 
   for (const file of await findFiles(contentRoot, '.txt', { langs, templates })) {
     const content = await fsp.readFile(file.path, 'utf-8')
-    const map: StructuredFieldMap = {}
+    const fieldMap: StructuredFieldMap = {}
 
-    for (const raw of decodeFields(content)) {
-      if (!matchesFilter(fields, raw.name))
+    for (const rawField of decodeFields(content)) {
+      if (!matchesFilter(fields, rawField.name))
         continue
 
-      const field = parseStructuredField(raw)
+      const field = parseStructuredField(rawField)
       if (field)
-        map[field.name] = field.value
+        fieldMap[field.name] = field.value
     }
 
-    const names = Object.keys(map)
-    if (names.length === 0)
+    const fieldNames = Object.keys(fieldMap)
+    if (fieldNames.length === 0)
       continue
 
     const output = path.join(file.folder, contentFilename(file, '.json'))
     const outputPath = path.join(outDir, output)
 
     await fsp.mkdir(path.dirname(outputPath), { recursive: true })
-    await fsp.writeFile(outputPath, `${JSON.stringify(map, undefined, 2)}\n`)
-    written.add(output)
+    await fsp.writeFile(outputPath, `${JSON.stringify(fieldMap, undefined, 2)}\n`)
+    writtenDatasets.add(output)
 
     results.push({
       source: path.relative(contentRoot, file.path),
       output,
-      fields: names,
+      fields: fieldNames,
     })
   }
 
   const cleaned = clean
-    ? await cleanStaleDatasets(outDir, written, { langs, fields, templates })
+    ? await cleanStaleDatasets(outDir, writtenDatasets, { langs, fields, templates })
     : []
 
   return { results, cleaned }
@@ -64,7 +64,7 @@ export async function extractFields(
  */
 async function cleanStaleDatasets(
   outDir: string,
-  written: Set<string>,
+  writtenDatasets: Set<string>,
   { langs, fields, templates }: FilterOptions,
 ): Promise<string[]> {
   if (!(await isDirectory(outDir)))
@@ -73,25 +73,25 @@ async function cleanStaleDatasets(
   const cleaned: string[] = []
 
   for (const file of await findFiles(outDir, '.json', { langs, templates })) {
-    const dataset = path.join(file.folder, contentFilename(file, '.json'))
-    if (written.has(dataset))
+    const datasetPath = path.join(file.folder, contentFilename(file, '.json'))
+    if (writtenDatasets.has(datasetPath))
       continue
 
     if (fields) {
-      let map: StructuredFieldMap
+      let fieldMap: StructuredFieldMap
       try {
-        map = JSON.parse(await fsp.readFile(file.path, 'utf-8')) as StructuredFieldMap
+        fieldMap = JSON.parse(await fsp.readFile(file.path, 'utf-8')) as StructuredFieldMap
       }
       catch {
         continue
       }
 
-      if (!Object.keys(map).some(name => matchesFilter(fields, name)))
+      if (!Object.keys(fieldMap).some(name => matchesFilter(fields, name)))
         continue
     }
 
     await fsp.rm(file.path)
-    cleaned.push(dataset)
+    cleaned.push(datasetPath)
   }
 
   return cleaned

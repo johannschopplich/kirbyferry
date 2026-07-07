@@ -4,7 +4,7 @@ import * as path from 'node:path'
 import process from 'node:process'
 import * as ansis from 'ansis'
 import { defineCommand, runMain } from 'citty'
-import pkg from '../package.json' with { type: 'json' }
+import packageJson from '../package.json' with { type: 'json' }
 import { CONTENT_ROOT_CANDIDATES, DEFAULT_OUT_DIR } from './defaults.ts'
 import { extractFields } from './extract.ts'
 import { injectFields } from './inject.ts'
@@ -101,9 +101,9 @@ const inject = defineCommand({
 
 const main = defineCommand({
   meta: {
-    name: pkg.name,
-    version: pkg.version,
-    description: pkg.description,
+    name: packageJson.name,
+    version: packageJson.version,
+    description: packageJson.description,
   },
   subCommands: { extract, inject },
 })
@@ -127,7 +127,7 @@ function parseList(value: string | undefined): string[] | undefined {
 }
 
 function header(): void {
-  log.info(`${ansis.bold(pkg.name)} ${ansis.dim(`v${pkg.version}`)}`)
+  log.info(`${ansis.bold(packageJson.name)} ${ansis.dim(`v${packageJson.version}`)}`)
   console.log()
 }
 

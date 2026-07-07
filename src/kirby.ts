@@ -90,15 +90,15 @@ export function replaceField(content: string, name: string, value: string): stri
   let chunkStart = 0
 
   for (const separator of content.matchAll(FIELD_SEPARATOR)) {
-    const replaced = replaceChunkValue(content.slice(chunkStart, separator.index), name, value)
-    if (replaced !== undefined)
-      return content.slice(0, chunkStart) + replaced + content.slice(separator.index)
+    const rewrittenChunk = replaceChunkValue(content.slice(chunkStart, separator.index), name, value)
+    if (rewrittenChunk !== undefined)
+      return content.slice(0, chunkStart) + rewrittenChunk + content.slice(separator.index)
 
     chunkStart = separator.index + separator[0].length
   }
 
-  const replaced = replaceChunkValue(content.slice(chunkStart), name, value)
-  return replaced === undefined ? undefined : content.slice(0, chunkStart) + replaced
+  const rewrittenChunk = replaceChunkValue(content.slice(chunkStart), name, value)
+  return rewrittenChunk === undefined ? undefined : content.slice(0, chunkStart) + rewrittenChunk
 }
 
 /**
@@ -113,11 +113,11 @@ function replaceChunkValue(chunk: string, name: string, value: string): string |
 
   // Tolerate trailing horizontal whitespace after the closing bracket so a
   // hand-edited line is still matched (and normalized) rather than skipped.
-  const rest = /^[^\S\n]*\[.*\][^\S\n]*(\n\s*)?$/.exec(chunk.slice(colonIndex + 1))
-  if (!rest)
+  const valueMatch = /^[^\S\n]*\[.*\][^\S\n]*(\n\s*)?$/.exec(chunk.slice(colonIndex + 1))
+  if (!valueMatch)
     return undefined
 
-  return `${chunk.slice(0, colonIndex + 1)} ${value}${rest[1] ?? ''}`
+  return `${chunk.slice(0, colonIndex + 1)} ${value}${valueMatch[1] ?? ''}`
 }
 
 /**
@@ -133,21 +133,21 @@ export function encodeFieldValue(value: unknown): string {
 }
 
 export function parseFilename(filename: string): ParsedFilename {
-  const ext = path.extname(filename)
-  const base = ext ? filename.slice(0, -ext.length) : filename
-  const dotIndex = base.lastIndexOf('.')
+  const extension = path.extname(filename)
+  const baseName = extension ? filename.slice(0, -extension.length) : filename
+  const dotIndex = baseName.lastIndexOf('.')
 
   if (dotIndex !== -1) {
-    const candidate = base.slice(dotIndex + 1)
+    const candidate = baseName.slice(dotIndex + 1)
     if (LANGUAGE_CODE.test(candidate))
-      return { template: base.slice(0, dotIndex), lang: candidate }
+      return { template: baseName.slice(0, dotIndex), lang: candidate }
   }
 
-  return { template: base }
+  return { template: baseName }
 }
 
-export function contentFilename(file: ParsedFilename, ext: string): string {
-  return file.lang ? `${file.template}.${file.lang}${ext}` : `${file.template}${ext}`
+export function contentFilename(file: ParsedFilename, extension: string): string {
+  return file.lang ? `${file.template}.${file.lang}${extension}` : `${file.template}${extension}`
 }
 
 /**
@@ -156,13 +156,13 @@ export function contentFilename(file: ParsedFilename, ext: string): string {
  */
 export async function findFiles(
   root: string,
-  ext: string,
+  extension: string,
   filter: { langs?: string[], templates?: string[] } = {},
 ): Promise<TreeFile[]> {
   const { langs, templates } = filter
   const files: TreeFile[] = []
 
-  for await (const entry of fsp.glob(`**/*${ext}`, { cwd: root, withFileTypes: true })) {
+  for await (const entry of fsp.glob(`**/*${extension}`, { cwd: root, withFileTypes: true })) {
     if (!entry.isFile())
       continue
 

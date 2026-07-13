@@ -2,7 +2,7 @@
   "name": "kirbyferry",
   "type": "module",
   "version": "0.0.0",
-  "packageManager": "pnpm@11.12.0",
+  "packageManager": "pnpm@11.10.0",
   "description": "Round-trip Kirby blocks/layout fields to editable JSON and back",
   "author": "Johann Schopplich <hello@johannschopplich.com>",
   "license": "MIT",

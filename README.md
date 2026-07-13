@@ -13,8 +13,6 @@ pnpm add -D kirbyferry
 npx kirbyferry extract
 ```
 
-Requires Node.js 22 or later.
-
 ## CLI
 
 ```bash

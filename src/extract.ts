@@ -2,7 +2,9 @@ import type { ExtractOptions, ExtractReport, ExtractResult, FilterOptions, Struc
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { DEFAULT_OUT_DIR } from './defaults.ts'
-import { contentFilename, decodeFields, findFiles, isDirectory, matchesFilter, parseStructuredField } from './kirby.ts'
+import { decodeFields, parseStructuredField } from './kirby.ts'
+import { findFiles, isDirectory } from './utils/fs.ts'
+import { contentFilename, matchesFilter } from './utils/tree.ts'
 
 /**
  * Extracts every `blocks`/`layout` field from the content tree into
@@ -50,19 +52,18 @@ export async function extractFields(
   }
 
   const cleanedDatasets = clean
-    ? await cleanStaleDatasets(outDir, writtenDatasets, { langs, fields, templates })
+    ? await removeStaleDatasets(outDir, writtenDatasets, { langs, fields, templates })
     : []
 
   return { results, cleanedDatasets }
 }
 
 /**
- * Deletes dataset files this run did not produce, but only those the current
- * filters own: language/template-matched and, when a field filter is active,
- * containing at least one matching key. Unreadable JSON is left in place –
- * deleting what cannot be understood risks destroying edits.
+ * Scoped to what the active filters own: language/template-matched and, when a
+ * field filter is active, holding at least one matching key. Unreadable JSON is
+ * left in place – deleting what cannot be parsed risks destroying edits.
  */
-async function cleanStaleDatasets(
+async function removeStaleDatasets(
   outDir: string,
   writtenDatasets: Set<string>,
   { langs, fields, templates }: FilterOptions,

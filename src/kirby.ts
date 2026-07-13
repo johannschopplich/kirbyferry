@@ -1,15 +1,10 @@
 import type {
   ContentBlock,
   LayoutRow,
-  ParsedFilename,
   RawField,
   StructuredField,
-  TreeFile,
 } from './types.ts'
-import * as fsp from 'node:fs/promises'
-import * as path from 'node:path'
-import process from 'node:process'
-import { CONTENT_ROOT_CANDIDATES } from './defaults.ts'
+import { isObject } from './utils/json.ts'
 
 /** Mirrors Kirby's own `Txt` field divider. */
 const FIELD_SEPARATOR = /\n----\s*/g
@@ -17,15 +12,12 @@ const FIELD_SEPARATOR = /\n----\s*/g
 /** A `\----`-escaped divider at line start, as written by Kirby's `Txt::encodeValue`. */
 const ESCAPED_DIVIDER = /(?<=^|\n)\\----/g
 
-/** ISO-style language code, e.g. `en` or `en-us`. */
-const LANGUAGE_CODE = /^[a-z]{2}(?:-[a-z]{2,})?$/
-
 /** U+2028/U+2029 line separators, escaped to keep field values on one line. */
 const LINE_SEPARATOR = String.fromCharCode(0x2028)
 const PARAGRAPH_SEPARATOR = String.fromCharCode(0x2029)
 
 /**
- * Splits Kirby `.txt` content into its raw `Key: value` fields, unescaping
+ * Splits Kirby content-file text into its raw `Key: value` fields, unescaping
  * `\----` dividers like Kirby's `Txt::decode`; values are otherwise returned
  * verbatim so callers decide how to interpret them.
  */
@@ -49,8 +41,8 @@ export function decodeFields(content: string): RawField[] {
 }
 
 /**
- * Detects a serialized `blocks` or `layout` field by its value shape; ignores
- * YAML structures, scalars, and empty arrays.
+ * Sniffs a serialized `blocks` or `layout` value by shape; returns `undefined`
+ * for YAML structures, scalars, and empty arrays – anything inject must not touch.
  */
 export function parseStructuredField(field: RawField): StructuredField | undefined {
   if (!field.value.startsWith('['))
@@ -77,7 +69,7 @@ export function parseStructuredField(field: RawField): StructuredField | undefin
 }
 
 /**
- * Replaces a single-line field value within `.txt` content, leaving every other
+ * Replaces a single-line field value within a content file, leaving every other
  * field untouched; returns `undefined` if the field is absent or stored across
  * multiple lines. Candidates are bounded by Kirby's field divider, so a
  * look-alike `Name: [...]` line inside another field's multiline value can
@@ -103,17 +95,20 @@ export function replaceField(content: string, name: string, value: string): stri
 
 /**
  * Rewrites one field chunk if it belongs to `name` and holds a single-line
- * bracketed value; whitespace between the value and the next divider survives
- * so surrounding bytes stay put.
+ * bracketed value; the line terminator – a bare `\r` on CRLF content, or the
+ * whitespace between the value and the next divider – survives so surrounding
+ * bytes stay put.
  */
 function replaceChunkValue(chunk: string, name: string, value: string): string | undefined {
   const colonIndex = chunk.indexOf(':')
   if (colonIndex === -1 || chunk.slice(0, colonIndex).trim() !== name)
     return undefined
 
-  // Tolerate trailing horizontal whitespace after the closing bracket so a
-  // hand-edited line is still matched (and normalized) rather than skipped.
-  const valueMatch = /^[^\S\n]*\[.*\][^\S\n]*(\n\s*)?$/.exec(chunk.slice(colonIndex + 1))
+  // Drop stray horizontal whitespace after the closing bracket so a hand-edited
+  // line is still matched and normalized, but keep the line ending: a trailing
+  // `\r` (CRLF divider) or `\n…` must be re-emitted, or rewriting one field would
+  // flip it to LF and leave the file with mixed endings.
+  const valueMatch = /^[^\S\n]*\[.*\][^\S\r\n]*(\r?\n\s*|\r)?$/.exec(chunk.slice(colonIndex + 1))
   if (!valueMatch)
     return undefined
 
@@ -132,89 +127,6 @@ export function encodeFieldValue(value: unknown): string {
     .replaceAll(PARAGRAPH_SEPARATOR, '\\u2029')
 }
 
-export function parseFilename(filename: string): ParsedFilename {
-  const extension = path.extname(filename)
-  const baseName = extension ? filename.slice(0, -extension.length) : filename
-  const dotIndex = baseName.lastIndexOf('.')
-
-  if (dotIndex !== -1) {
-    const candidate = baseName.slice(dotIndex + 1)
-    if (LANGUAGE_CODE.test(candidate))
-      return { template: baseName.slice(0, dotIndex), lang: candidate }
-  }
-
-  return { template: baseName }
-}
-
-export function contentFilename(file: ParsedFilename, extension: string): string {
-  return file.lang ? `${file.template}.${file.lang}${extension}` : `${file.template}${extension}`
-}
-
-/**
- * Recursively finds files with the given extension under `root`, each
- * decomposed into template and language and filtered by the optional lists.
- */
-export async function findFiles(
-  root: string,
-  extension: string,
-  filter: { langs?: string[], templates?: string[] } = {},
-): Promise<TreeFile[]> {
-  const { langs, templates } = filter
-  const files: TreeFile[] = []
-
-  for await (const entry of fsp.glob(`**/*${extension}`, { cwd: root, withFileTypes: true })) {
-    if (!entry.isFile())
-      continue
-
-    const { template, lang } = parseFilename(entry.name)
-
-    if (!matchesFilter(templates, template))
-      continue
-    if (langs && (!lang || !matchesFilter(langs, lang)))
-      continue
-
-    files.push({
-      path: path.join(entry.parentPath, entry.name),
-      folder: path.relative(root, entry.parentPath),
-      template,
-      lang,
-    })
-  }
-
-  return files
-}
-
-/** Case-insensitive membership test for the field, language, and template filters. */
-export function matchesFilter(filter: string[] | undefined, value: string): boolean {
-  return !filter || filter.some(item => item.toLowerCase() === value.toLowerCase())
-}
-
-/**
- * Resolves the Kirby content root, using `explicit` when given, otherwise the
- * first conventional location that exists; throws if none do.
- */
-export async function resolveContentRoot(
-  explicit?: string,
-  cwd: string = process.cwd(),
-): Promise<string> {
-  if (explicit) {
-    const resolvedPath = path.resolve(cwd, explicit)
-    if (!(await isDirectory(resolvedPath)))
-      throw new Error(`Not a directory: ${resolvedPath}`)
-    return resolvedPath
-  }
-
-  for (const candidate of CONTENT_ROOT_CANDIDATES) {
-    const resolvedPath = path.resolve(cwd, candidate)
-    if (await isDirectory(resolvedPath))
-      return resolvedPath
-  }
-
-  throw new Error(
-    `No Kirby content directory found (tried ${CONTENT_ROOT_CANDIDATES.join(', ')})`,
-  )
-}
-
 /**
  * Accepts what inject may safely write back: an empty array (clears the field)
  * or a homogeneous blocks/layout array.
@@ -230,17 +142,4 @@ function isLayoutRow(item: unknown): boolean {
 
 function isContentBlock(item: unknown): boolean {
   return isObject(item) && typeof item.type === 'string' && 'content' in item && !('columns' in item)
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-export async function isDirectory(target: string): Promise<boolean> {
-  try {
-    return (await fsp.stat(target)).isDirectory()
-  }
-  catch {
-    return false
-  }
 }

@@ -4,12 +4,9 @@ export { injectFields } from './inject.ts'
 export {
   decodeFields,
   encodeFieldValue,
-  findFiles,
   isStructuredFieldValue,
-  parseFilename,
   parseStructuredField,
   replaceField,
-  resolveContentRoot,
 } from './kirby.ts'
 export type {
   ContentBlock,
@@ -27,3 +24,5 @@ export type {
   StructuredFieldMap,
   TreeFile,
 } from './types.ts'
+export { findFiles, resolveContentRoot } from './utils/fs.ts'
+export { parseFilename } from './utils/tree.ts'

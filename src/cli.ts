@@ -8,8 +8,8 @@ import packageJson from '../package.json' with { type: 'json' }
 import { CONTENT_ROOT_CANDIDATES, DEFAULT_OUT_DIR } from './defaults.ts'
 import { extractFields } from './extract.ts'
 import { injectFields } from './inject.ts'
-import { resolveContentRoot } from './kirby.ts'
 import * as log from './log.ts'
+import { resolveContentRoot } from './utils/fs.ts'
 
 const sharedArgs = {
   dir: {

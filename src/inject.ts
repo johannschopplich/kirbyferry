@@ -1,12 +1,14 @@
 import type { InjectOptions, InjectResult, StructuredFieldMap } from './types.ts'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
-import { isDeepStrictEqual } from 'node:util'
 import { DEFAULT_OUT_DIR } from './defaults.ts'
-import { contentFilename, decodeFields, encodeFieldValue, findFiles, isStructuredFieldValue, matchesFilter, replaceField } from './kirby.ts'
+import { decodeFields, encodeFieldValue, isStructuredFieldValue, replaceField } from './kirby.ts'
+import { findFiles } from './utils/fs.ts'
+import { isJsonEqual } from './utils/json.ts'
+import { contentFilename, matchesFilter } from './utils/tree.ts'
 
 /**
- * Injects edited JSON back into the matching Kirby `.txt` files, minifying each
+ * Injects edited JSON back into the matching Kirby content files, minifying each
  * field value and replacing only that field's line so all surrounding content
  * is preserved byte-for-byte.
  */
@@ -112,13 +114,4 @@ export async function injectFields(
   }
 
   return pendingWrites.map(item => item.result)
-}
-
-function isJsonEqual(storedValue: string, value: unknown): boolean {
-  try {
-    return isDeepStrictEqual(JSON.parse(storedValue), value)
-  }
-  catch {
-    return false
-  }
 }

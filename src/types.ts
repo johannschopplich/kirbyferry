@@ -1,4 +1,4 @@
-/** A raw `Key: value` field parsed from a Kirby `.txt` content file. */
+/** A raw `Key: value` field parsed from a Kirby content file. */
 export interface RawField {
   /** Field key exactly as written in the file (e.g. `Text`). */
   name: string
@@ -20,7 +20,6 @@ export interface TreeFile {
   path: string
   /** Directory of the file relative to its root. */
   folder: string
-  /** Template name. */
   template: string
   /** Language code, or `undefined` for single-language sites. */
   lang?: string
@@ -41,16 +40,12 @@ export interface LayoutRow {
   attrs?: Record<string, unknown>
 }
 
-/** The detected type of a sniffed field value. */
 export type FieldType = 'blocks' | 'layout'
 
 /** A field whose value is serialized `blocks` or `layout` JSON. */
 export interface StructuredField {
-  /** Field key exactly as written in the `.txt` file. */
   name: string
-  /** Detected field type. */
   type: FieldType
-  /** Parsed field value. */
   value: ContentBlock[] | LayoutRow[]
 }
 
@@ -81,7 +76,7 @@ export interface InjectOptions extends FilterOptions {
 
 /** Result of extracting one content file. */
 export interface ExtractResult {
-  /** Source `.txt` path relative to the content root. */
+  /** Source content-file path relative to the content root. */
   source: string
   /** Written JSON path relative to the output directory. */
   output: string
@@ -99,7 +94,7 @@ export interface ExtractReport {
 
 /** Result of injecting one JSON file back into its content file. */
 export interface InjectResult {
-  /** Target `.txt` path relative to the content root. */
+  /** Target content-file path relative to the content root. */
   target: string
   /** Names of the fields written back. */
   fields: string[]

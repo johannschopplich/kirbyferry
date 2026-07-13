@@ -94,10 +94,8 @@ export function replaceField(content: string, name: string, value: string): stri
 }
 
 /**
- * Rewrites one field chunk if it belongs to `name` and holds a single-line
- * bracketed value; the line terminator – a bare `\r` on CRLF content, or the
- * whitespace between the value and the next divider – survives so surrounding
- * bytes stay put.
+ * The line terminator – a bare `\r` on CRLF content, or the whitespace before the
+ * next divider – is preserved, so rewriting a field can't disturb surrounding bytes.
  */
 function replaceChunkValue(chunk: string, name: string, value: string): string | undefined {
   const colonIndex = chunk.indexOf(':')
@@ -127,10 +125,7 @@ export function encodeFieldValue(value: unknown): string {
     .replaceAll(PARAGRAPH_SEPARATOR, '\\u2029')
 }
 
-/**
- * Accepts what inject may safely write back: an empty array (clears the field)
- * or a homogeneous blocks/layout array.
- */
+/** True for an empty array, or one whose items are all blocks or all layout rows – never a mix. */
 export function isStructuredFieldValue(value: unknown): value is ContentBlock[] | LayoutRow[] {
   return Array.isArray(value)
     && (value.length === 0 || value.every(isLayoutRow) || value.every(isContentBlock))

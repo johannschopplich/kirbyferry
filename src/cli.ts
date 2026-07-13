@@ -108,9 +108,9 @@ const main = defineCommand({
   subCommands: { extract, inject },
 })
 
-async function resolveRoot(dir: string | undefined): Promise<string> {
+async function resolveRoot(contentDir: string | undefined): Promise<string> {
   try {
-    return await resolveContentRoot(dir)
+    return await resolveContentRoot(contentDir)
   }
   catch (error) {
     log.error((error as Error).message)

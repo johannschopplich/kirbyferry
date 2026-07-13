@@ -8,9 +8,9 @@ import { isJsonEqual } from './utils/json.ts'
 import { contentFilename, matchesFilter } from './utils/tree.ts'
 
 /**
- * Injects edited JSON back into the matching Kirby content files, minifying each
- * field value and replacing only that field's line so all surrounding content
- * is preserved byte-for-byte.
+ * Rewrites only the lines of fields that actually changed, so everything else in
+ * each content file survives byte-for-byte. One invalid or orphaned dataset
+ * aborts the whole run before anything is written.
  */
 export async function injectFields(
   contentRoot: string,
@@ -21,7 +21,7 @@ export async function injectFields(
 
   // First pass: compute every replacement in memory and collect everything that
   // blocks the run. Nothing is written until the whole tree validates.
-  const pendingWrites: { txtPath: string, content: string, result: InjectResult }[] = []
+  const pendingWrites: { contentFilePath: string, content: string, result: InjectResult }[] = []
   const abortReasons: string[] = []
   let hasMissingTargets = false
 
@@ -46,14 +46,14 @@ export async function injectFields(
       continue
     }
 
-    const txtPath = path.join(contentRoot, file.folder, contentFilename(file, '.txt'))
+    const contentFilePath = path.join(contentRoot, file.folder, contentFilename(file, '.txt'))
 
     let content: string
     try {
-      content = await fsp.readFile(txtPath, 'utf-8')
+      content = await fsp.readFile(contentFilePath, 'utf-8')
     }
     catch {
-      abortReasons.push(`No content file to inject into: ${path.relative(contentRoot, txtPath)}`)
+      abortReasons.push(`No content file to inject into: ${path.relative(contentRoot, contentFilePath)}`)
       hasMissingTargets = true
       continue
     }
@@ -85,10 +85,10 @@ export async function injectFields(
     }
 
     pendingWrites.push({
-      txtPath,
+      contentFilePath,
       content,
       result: {
-        target: path.relative(contentRoot, txtPath),
+        target: path.relative(contentRoot, contentFilePath),
         fields: writtenFields,
         skippedFields,
         hasChanged: content !== originalContent,
@@ -108,9 +108,9 @@ export async function injectFields(
     )
   }
 
-  for (const { txtPath, content, result } of pendingWrites) {
+  for (const { contentFilePath, content, result } of pendingWrites) {
     if (result.hasChanged && !dryRun)
-      await fsp.writeFile(txtPath, content)
+      await fsp.writeFile(contentFilePath, content)
   }
 
   return pendingWrites.map(item => item.result)

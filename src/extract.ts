@@ -6,11 +6,7 @@ import { decodeFields, parseStructuredField } from './kirby.ts'
 import { findFiles, isDirectory } from './utils/fs.ts'
 import { contentFilename, matchesFilter } from './utils/tree.ts'
 
-/**
- * Extracts every `blocks`/`layout` field from the content tree into
- * pretty-printed JSON, mirroring the source folders under `out` as field-keyed
- * maps.
- */
+/** Extracts only `blocks` and `layout` fields; other field types are ignored. */
 export async function extractFields(
   contentRoot: string,
   options: ExtractOptions = {},

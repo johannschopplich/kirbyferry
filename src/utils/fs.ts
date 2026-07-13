@@ -14,10 +14,7 @@ export async function isDirectory(target: string): Promise<boolean> {
   }
 }
 
-/**
- * Walks `root` for files with the given extension, decomposing each name into
- * template and language and keeping only those that pass the optional filters.
- */
+/** Recursively collects matching files, each with its parsed template and language. */
 export async function findFiles(
   root: string,
   extension: string,
@@ -48,16 +45,13 @@ export async function findFiles(
   return files
 }
 
-/**
- * Resolves the content root: `explicit` when given, otherwise the first
- * conventional candidate that exists. Throws when neither resolves.
- */
+/** Returns an existing directory, or throws – never a path that doesn't exist. */
 export async function resolveContentRoot(
-  explicit?: string,
+  contentDir?: string,
   cwd: string = process.cwd(),
 ): Promise<string> {
-  if (explicit) {
-    const resolvedPath = path.resolve(cwd, explicit)
+  if (contentDir) {
+    const resolvedPath = path.resolve(cwd, contentDir)
     if (!(await isDirectory(resolvedPath)))
       throw new Error(`Not a directory: ${resolvedPath}`)
     return resolvedPath

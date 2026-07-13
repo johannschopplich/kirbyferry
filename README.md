@@ -1,15 +1,15 @@
 # kirbyferry
 
-Kirby stores `blocks` and `layout` fields as a single line of minified JSON inside `.txt` content files – impossible to read, diff, or translate by hand. kirbyferry pulls those fields out into pretty-printed, per-page JSON, lets you edit them, and injects them back minified, touching nothing else in the file.
+Kirby stores `blocks` and `layout` fields as a single line of minified JSON inside `.txt` content files – impossible to read, diff, or translate by hand. kirbyferry pulls those fields out into pretty-printed, per-file JSON, lets you edit them, and injects them back minified, touching nothing else in the file.
 
 It detects these fields by their value shape – no blueprint parsing, no Kirby runtime, no PHP – so it works on any Kirby site, plugins and custom field types included.
 
 ## Installation
 
 ```bash
-pnpm add -D kirbyferry
+npm install -D kirbyferry
 
-# Or run directly
+# Or run once, without installing
 npx kirbyferry extract
 ```
 
@@ -40,13 +40,16 @@ Options:
 
 ## Usage
 
-`extract` mirrors the content tree under `--out`. Each file is a field-keyed map, so a page with multiple block fields keeps them together:
+`extract` mirrors the content tree under `--out`. Each extracted file – a **dataset** – is a field-keyed map, so a page's `blocks` and `layout` fields stay together in one file:
 
 ```jsonc
 // content-fields/3_projects/stube-umlauts/project.en.json
 {
   "Text": [
     { "id": "9c34…", "type": "text", "content": { "text": "<p>…</p>" }, "isHidden": false }
+  ],
+  "Layout": [
+    { "id": "a1b2…", "columns": [ /* … */ ] }
   ]
 }
 ```
@@ -120,7 +123,7 @@ interface ExtractReport {
 
 ### `injectFields`
 
-Injects edited JSON back into the matching `.txt` files. Returns one `InjectResult` per dataset file, listing the fields written, the fields skipped, and whether the file changed. Throws before writing anything if a dataset is unreadable, holds a value that is not a blocks/layout array, or lacks its target content file.
+Injects edited JSON back into the matching `.txt` files. Returns one `InjectResult` per dataset, listing the fields written, the fields skipped, and whether the file changed. Throws before writing anything if a dataset is invalid or missing its target – see [Scope and limits](#scope-and-limits).
 
 ```ts
 function injectFields(contentRoot: string, options?: InjectOptions): Promise<InjectResult[]>

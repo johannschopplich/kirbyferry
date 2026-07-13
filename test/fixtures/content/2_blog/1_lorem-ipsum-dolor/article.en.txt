@@ -1,0 +1,9 @@
+Title: Lorem Ipsum Dolor
+
+----
+
+Text: [{"content":{"level":"h2","text":"Chapter One"},"id":"a-heading","isHidden":false,"type":"heading"},{"content":{"text":"<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>"},"id":"a-text","isHidden":false,"type":"text"},{"content":{"text":"<ul><li>Alpha</li><li>Beta</li></ul>"},"id":"a-list","isHidden":false,"type":"list"},{"content":{"text":"The whole is more than the sum of its parts.","citation":"Aristotle"},"id":"a-quote","isHidden":false,"type":"quote"},{"content":{"location":"kirby","image":["file://lorem-photo"],"src":"","alt":"A lorem placeholder","caption":"","link":"","ratio":"4/3","crop":"true"},"id":"a-image","isHidden":false,"type":"image"},{"content":{"location":"web","url":"https://youtu.be/dQw4w9WgXcQ","video":[],"poster":[],"caption":"A short clip","autoplay":"false","muted":"true","loop":"false","controls":"true","preload":""},"id":"a-video","isHidden":false,"type":"video"},{"content":{"code":"const answer = 42\nconsole.log(answer)","language":""},"id":"a-code","isHidden":false,"type":"code"},{"content":{"images":["file://lorem-photo"],"caption":"Selected frames","ratio":"","crop":"false"},"id":"a-gallery","isHidden":false,"type":"gallery"},{"content":{"text":"## Notes\n\nA short paragraph."},"id":"a-markdown","isHidden":false,"type":"markdown"},{"content":[],"id":"a-line","isHidden":false,"type":"line"},{"content":{"rows":[["Term","Definition"],["Ipsum","Placeholder"]]},"id":"a-table","isHidden":false,"type":"table"}]
+
+----
+
+Uuid: lorem-ipsum-dolor

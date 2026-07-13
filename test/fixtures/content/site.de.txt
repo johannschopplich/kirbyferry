@@ -1,0 +1,20 @@
+Title: Lorem-Ipsum-Journal
+
+----
+
+Intro: [{"content":{"level":"h2","text":"Lorem-Ipsum-Journal"},"id":"site-intro-heading","isHidden":false,"type":"heading"},{"content":{"text":"<p>Es gibt niemanden, der den Schmerz an sich liebt.</p>"},"id":"site-intro-text","isHidden":false,"type":"text"}]
+
+----
+
+Social:
+
+- 
+  platform: Mastodon
+  url: https://mastodon.example/@lorem
+- 
+  platform: GitHub
+  url: https://github.com/lorem/ipsum
+
+----
+
+Copyright: © Lorem Ipsum

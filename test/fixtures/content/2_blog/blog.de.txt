@@ -1,0 +1,5 @@
+Title: Blog
+
+----
+
+Text: [{"content":{"text":"<p>Notizen zur Typografie und zu Platzhaltertexten.</p>"},"id":"blog-intro","isHidden":false,"type":"text"}]

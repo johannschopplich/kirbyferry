@@ -1,0 +1,5 @@
+Title: Startseite
+
+----
+
+Body: [{"attrs":[],"columns":[{"blocks":[{"content":{"level":"h1","text":"Willkommen"},"id":"home-heading","isHidden":false,"type":"heading"},{"content":{"text":"<p>Aber ich muss dir erklären, wie diese irrige Vorstellung entstand.</p>"},"id":"home-text","isHidden":false,"type":"text"}],"id":"home-col-left","width":"1/2"},{"blocks":[{"content":{"location":"web","image":[],"src":"https://example.com/hero.jpg","alt":"Ein Platzhalterbild","caption":"","link":"","ratio":"16/9","crop":"false"},"id":"home-image","isHidden":false,"type":"image"}],"id":"home-col-right","width":"1/2"}],"id":"home-row"}]

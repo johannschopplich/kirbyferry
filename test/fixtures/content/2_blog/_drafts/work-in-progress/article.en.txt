@@ -1,0 +1,9 @@
+Title: Work in Progress
+
+----
+
+Text: [{"content":{"level":"h2","text":"Draft Heading"},"id":"d-heading","isHidden":false,"type":"heading"},{"content":{"text":"<p>An unfinished thought.</p>"},"id":"d-text","isHidden":false,"type":"text"},{"content":{"text":"To be continued.","citation":""},"id":"d-quote","isHidden":false,"type":"quote"}]
+
+----
+
+Uuid: work-in-progress

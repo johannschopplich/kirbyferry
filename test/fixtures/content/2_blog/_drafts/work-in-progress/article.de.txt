@@ -1,0 +1,5 @@
+Title: In Arbeit
+
+----
+
+Text: [{"content":{"level":"h2","text":"Entwurf"},"id":"d-heading","isHidden":false,"type":"heading"},{"content":{"text":"<p>Ein unfertiger Gedanke.</p>"},"id":"d-text","isHidden":false,"type":"text"},{"content":{"text":"Fortsetzung folgt.","citation":""},"id":"d-quote","isHidden":false,"type":"quote"}]

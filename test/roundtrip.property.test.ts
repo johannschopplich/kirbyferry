@@ -38,7 +38,7 @@ function pageWith(encodedValue: string): string {
 }
 
 describe('round-trip properties', () => {
-  it('extraction recovers exactly what Kirby-encoded content stores', () => {
+  it('decoding recovers the exact blocks that were encoded', () => {
     fc.assert(fc.property(blocksArbitrary, (blocks) => {
       const page = pageWith(encodeFieldValue(blocks))
       const rawField = decodeFields(page).find(field => field.name === 'Text')!
@@ -57,7 +57,7 @@ describe('round-trip properties', () => {
     }))
   })
 
-  it('an edited value survives inject and re-extract with surroundings untouched', () => {
+  it('applies an edit while leaving surrounding fields untouched', () => {
     fc.assert(fc.property(blocksArbitrary, blocksArbitrary, (blocks, editedBlocks) => {
       const page = pageWith(encodeFieldValue(blocks))
       const next = replaceField(page, 'Text', encodeFieldValue(editedBlocks))!

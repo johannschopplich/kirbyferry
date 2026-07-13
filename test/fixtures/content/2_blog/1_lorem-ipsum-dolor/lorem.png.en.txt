@@ -1,0 +1,13 @@
+Alt: A lorem placeholder
+
+----
+
+Caption: 
+
+----
+
+Uuid: lorem-photo
+
+----
+
+Template: photo

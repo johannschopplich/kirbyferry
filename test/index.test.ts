@@ -153,6 +153,12 @@ describe('replaceField', () => {
     expect(replaceField('Text: [1,2]   \n', 'Text', '[9]')).toBe('Text: [9]\n')
   })
 
+  it('preserves CRLF line endings instead of leaving the file mixed', () => {
+    const crlf = 'Title: Hi\r\n----\r\nText: [{"a":1}]\r\n----\r\nUuid: x\r\n'
+    expect(replaceField(crlf, 'Text', '[{"a":2}]'))
+      .toBe('Title: Hi\r\n----\r\nText: [{"a":2}]\r\n----\r\nUuid: x\r\n')
+  })
+
   it('returns undefined for absent or multi-line fields', () => {
     expect(replaceField(SAMPLE_PAGE, 'Missing', '[]')).toBeUndefined()
     expect(replaceField(SAMPLE_PAGE, 'Footerlinks', '[]')).toBeUndefined()

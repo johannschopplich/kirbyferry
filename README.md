@@ -49,7 +49,7 @@ Options:
     { "id": "9c34…", "type": "text", "content": { "text": "<p>…</p>" }, "isHidden": false }
   ],
   "Layout": [
-    { "id": "a1b2…", "columns": [ /* … */ ] }
+    { "id": "a1b2…", "columns": [] }
   ]
 }
 ```

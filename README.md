@@ -1,8 +1,36 @@
+<div align="center">
+  <img src="./.github/favicon.svg" alt="kirbyferry logo" width="120">
+
 # kirbyferry
 
-Kirby stores `blocks` and `layout` fields as a single line of minified JSON inside `.txt` content files – impossible to read, diff, or translate by hand. kirbyferry pulls those fields out into pretty-printed, per-file JSON, lets you edit them, and injects them back minified, touching nothing else in the file.
+Round-trip Kirby `blocks` and `layout` fields to editable JSON and back.
 
-It detects these fields by their value shape – no blueprint parsing, no Kirby runtime, no PHP – so it works on any Kirby site, plugins and custom field types included.
+[Installation](#installation) •
+[CLI](#cli) •
+[Usage](#usage) •
+[API](#programmatic-api)
+
+</div>
+
+Kirby stores `blocks` and `layout` fields as a single line of minified JSON – impossible to read, diff, or translate by hand. kirbyferry pulls them into pretty-printed, per-file JSON, lets you edit them, and injects them back minified, touching nothing else. It detects fields by their value shape – no blueprint parsing, no Kirby runtime, no PHP – so it works on any Kirby site, plugins and custom field types included.
+
+## When to Use
+
+| I want to… | Run |
+| --- | --- |
+| Make `blocks`/`layout` JSON readable and editable | `kirbyferry extract` |
+| Write my edited JSON back into content | `kirbyferry inject` |
+| Translate one language, then write it back | `extract --lang de` … `inject --lang de` |
+| Preview what `inject` would change | `inject --dry-run` |
+| Narrow the scope to certain fields or templates | `--field`, `--template` |
+| Drop extracted files whose page was renamed or deleted | `extract --clean` |
+
+## Features
+
+- ♻️ **True round-trip**: pretty JSON out, minified back in – every other field left byte-for-byte.
+- 🔒 **Atomic & validated**: `inject` checks every dataset up front and aborts before a single write if anything is off.
+- ✋ **No-op safe**: unchanged fields keep their exact original bytes – older content is never reformatted.
+- 🧱 **YAML-safe**: `structure`/`object` fields are deliberately left untouched.
 
 ## Installation
 
@@ -69,14 +97,14 @@ npx kirbyferry inject --lang de         # write it back
 > [!TIP]
 > Run `inject --dry-run` first to preview which files and fields would change before touching content.
 
-### Scope and limits
+## Safety & limits
 
-- Handles the two field types Kirby stores as minified JSON: `blocks` and `layout`. `structure`/`object` fields are already human-readable YAML and are deliberately left byte-for-byte untouched – re-encoding YAML from JavaScript cannot reproduce Kirby's PHP handlers (Spyc or Symfony) faithfully, so kirbyferry never parses or rewrites them. Edit those fields directly in the `.txt`.
-- Fields are detected by value shape (`[{ id, type, content }]` → blocks, `[{ id, columns }]` → layout). Empty fields (`[]`) are skipped – there is nothing to make readable.
-- Targets single-line fields (Kirby's default `pretty: false`). A field stored as multi-line JSON is reported and skipped rather than corrupted.
-- `inject` validates every dataset before touching anything and is atomic: unreadable JSON, a value that is no longer a blocks/layout array, or a dataset without its target `.txt` aborts the run before a single write. Stale datasets (their source page was renamed or deleted) are removed by `extract --clean`.
-- `inject` rewrites only fields whose values actually changed. A field that still equals its stored value keeps its exact bytes – content written by older Kirby versions (e.g. with escaped slashes in JSON) is not reformatted by a no-op run.
-- Replacement is bounded by Kirby's `----` field divider, so a line inside some other field's multiline value that merely looks like a blocks field can never be rewritten.
+- **Two field types only.** Handles `blocks` and `layout` – the fields Kirby stores as minified JSON. `structure`/`object` are already human-readable YAML and left byte-for-byte untouched: re-encoding YAML from JavaScript cannot faithfully reproduce Kirby's PHP handlers (Spyc or Symfony), so kirbyferry never parses or rewrites them. Edit those directly in the `.txt`.
+- **Shape detection.** Fields are matched by value shape (`[{ id, type, content }]` → blocks, `[{ id, columns }]` → layout). Empty fields (`[]`) are skipped – there is nothing to make readable.
+- **Single-line only.** Targets Kirby's default `pretty: false` output. A field stored as multi-line JSON is reported and skipped rather than corrupted.
+- **Atomic inject.** Every dataset is validated before anything is touched: unreadable JSON, a value that is no longer a blocks/layout array, or a dataset missing its target `.txt` aborts the run before a single write. Stale datasets (source page renamed or deleted) are removed by `extract --clean`.
+- **No-op safe.** Only fields whose values actually changed are rewritten; an unchanged field keeps its exact bytes, so content from older Kirby versions (e.g. escaped slashes in JSON) is never reformatted.
+- **Divider-bounded.** Replacement is scoped by Kirby's `----` field divider, so a line inside another field's multiline value that merely looks like a blocks field can never be rewritten.
 
 ## Programmatic API
 
@@ -123,7 +151,7 @@ interface ExtractReport {
 
 ### `injectFields`
 
-Injects edited JSON back into the matching `.txt` files. Returns one `InjectResult` per dataset, listing the fields written, the fields skipped, and whether the file changed. Throws before writing anything if a dataset is invalid or missing its target – see [Scope and limits](#scope-and-limits).
+Injects edited JSON back into the matching `.txt` files. Returns one `InjectResult` per dataset, listing the fields written, the fields skipped, and whether the file changed. Throws before writing anything if a dataset is invalid or missing its target – see [Safety & limits](#safety--limits).
 
 ```ts
 function injectFields(contentRoot: string, options?: InjectOptions): Promise<InjectResult[]>

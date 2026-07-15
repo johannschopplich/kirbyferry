@@ -5,36 +5,31 @@
 
 Round-trip Kirby `blocks` and `layout` fields – or the whole content tree – to editable JSON and back.
 
+[When to Use](#when-to-use) •
 [Installation](#installation) •
 [CLI](#cli) •
 [Usage](#usage) •
+[Safety](#safety--limits) •
 [API](#programmatic-api)
 
 </div>
 
 Kirby stores `blocks` and `layout` fields as a single line of minified JSON – impossible to read, diff, or translate by hand. kirbyferry pulls them into pretty-printed, per-file JSON, lets you edit them, and injects them back minified, touching nothing else. It detects fields by their value shape – no blueprint parsing, no Kirby runtime, no PHP – so it works on any Kirby site, plugins and custom field types included.
 
-Need more than blocks and layout? `extract --all` dumps **every** field. `blocks`/`layout` come out as decoded JSON; everything else – text, `structure`/`object` YAML, dates – comes out as its raw string, written back verbatim. kirbyferry never re-encodes YAML (it can't match Kirby's PHP byte-for-byte), so an untouched field is always preserved exactly.
+Need more than blocks and layout? `extract --all` dumps **every** field. `blocks`/`layout` come out as decoded JSON; everything else – text, `structure`/`object` YAML, dates – comes out as its raw string, written back verbatim. kirbyferry never re-encodes YAML, so an untouched field is always preserved exactly.
 
 ## When to Use
 
 | I want to… | Run |
 | --- | --- |
-| Make `blocks`/`layout` JSON readable and editable | `kirbyferry extract` |
+| Make `blocks`/`layout` JSON readable and editable | `extract` |
 | Dump the whole content tree, not just blocks/layout | `extract --all` |
-| Write my edited JSON back into content | `kirbyferry inject` |
+| Write my edited JSON back into content | `inject` |
 | Translate one language, then write it back | `extract --lang de` … `inject --lang de` |
 | Preview what `inject` would change | `inject --dry-run` |
 | Narrow the scope to certain fields or templates | `--field`, `--template` |
 | Skip risky fields like `uuid`/`sort` | `--ignore uuid,sort` |
 | Drop extracted files whose page was renamed or deleted | `extract --clean` |
-
-## Features
-
-- ♻️ **True round-trip**: pretty JSON out, minified back in – every other field left byte-for-byte.
-- 🌳 **Whole tree, opt-in**: `--all` dumps every field into one JSON per page; blocks/layout decoded, everything else kept as a raw string.
-- ✋ **No-op safe**: an untouched raw field keeps its exact original bytes – blocks/layout always come back as Kirby's canonical JSON.
-- 🧱 **YAML-safe**: `structure`/`object` fields are never decoded or re-encoded – dumped verbatim, written back verbatim.
 
 ## Installation
 
@@ -74,7 +69,7 @@ Options:
 
 ## Usage
 
-`extract` mirrors the content tree under `--out`. Each extracted file – a **dataset** – is a field-keyed map, so a page's `blocks` and `layout` fields stay together in one file:
+`extract` mirrors the content tree under `--out`. Each extracted file – a **dataset** – is keyed by field name, so a page's `blocks` and `layout` fields stay together in one file:
 
 ```jsonc
 // content-fields/3_projects/stube-umlauts/project.en.json
@@ -92,7 +87,7 @@ Edit the JSON – translate it, restructure blocks, run it through tooling – t
 
 ### Editing one language in place
 
-A common use is editing the extracted JSON for a single language – running it through a translation tool, for example – then writing it back. This edits **existing** block content; it does not create a new Kirby language, which is a separate concern and out of scope.
+A common use is editing the extracted JSON for a single language – running it through a translation tool, for example – then writing it back.
 
 ```bash
 npx kirbyferry extract --lang de        # pull existing German block content
@@ -101,7 +96,7 @@ npx kirbyferry inject --lang de         # write it back
 ```
 
 > [!TIP]
-> Run `inject --dry-run` first to preview which files and fields would change before touching content.
+> Run `inject --dry-run` to preview which files and fields would change.
 
 ### The whole content tree
 

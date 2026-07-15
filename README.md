@@ -152,8 +152,6 @@ const extractReport = await extractFields(contentRoot, { out: 'content-fields', 
 const injectResults = await injectFields(contentRoot, { out: 'content-fields', dryRun: true })
 ```
 
-Lower-level helpers are exported too: `decodeFields`, `parseStructuredField`, `isStructuredFieldValue`, `isWritableFieldValue`, `encodeFieldValue`, `replaceField`, `parseFilename`, `findFiles`.
-
 ### `extractFields`
 
 Extracts `blocks`/`layout` fields under the content root into JSON – or, with `all`, every field (non-structured ones as raw strings). Returns one `ExtractResult` per written file, plus the stale datasets removed by `clean`.
@@ -200,14 +198,6 @@ interface InjectOptions extends FilterOptions {
   /** Report changes without writing files */
   dryRun?: boolean
 }
-```
-
-### `parseStructuredField`
-
-The detection primitive: given a raw `Key: value` field, returns its parsed blocks/layout value or `undefined`.
-
-```ts
-function parseStructuredField(field: RawField): StructuredField | undefined
 ```
 
 ## License

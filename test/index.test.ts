@@ -3,17 +3,16 @@ import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { extractFields, injectFields } from '../src/index.ts'
 import {
   decodeFields,
   encodeFieldValue,
-  extractFields,
-  injectFields,
   isStructuredFieldValue,
   isWritableFieldValue,
-  parseFilename,
   parseStructuredField,
   replaceField,
-} from '../src/index.ts'
+} from '../src/kirby.ts'
+import { parseFilename } from '../src/utils/tree.ts'
 
 const fixturesDir = path.resolve(import.meta.dirname, 'fixtures')
 

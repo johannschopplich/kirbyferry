@@ -1,7 +1,6 @@
 import fc from 'fast-check'
 import { describe, expect, it } from 'vitest'
-import { decodeFields, encodeFieldValue, parseStructuredField, replaceField } from '../src/index.ts'
-import { trimKirby } from '../src/kirby.ts'
+import { decodeFields, encodeFieldValue, parseStructuredField, replaceField, trimKirby } from '../src/kirby.ts'
 
 const hostileString = fc.oneof(
   fc.string(),

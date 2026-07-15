@@ -150,13 +150,11 @@ export function encodeFieldValue(value: unknown): string {
     .replaceAll(PARAGRAPH_SEPARATOR, '\\u2029')
 }
 
-/** True for an empty array, or one whose items are all blocks or all layout rows – never a mix. */
 export function isStructuredFieldValue(value: unknown): value is ContentBlock[] | LayoutRow[] {
   return Array.isArray(value)
     && (value.length === 0 || value.every(isLayoutRow) || value.every(isContentBlock))
 }
 
-/** Whether a value can be serialized back into a content file. */
 export function isWritableFieldValue(value: unknown): value is string | ContentBlock[] | LayoutRow[] {
   return typeof value === 'string' || isStructuredFieldValue(value)
 }

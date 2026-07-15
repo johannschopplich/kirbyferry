@@ -33,7 +33,6 @@ Need more than blocks and layout? `extract --all` dumps **every** field. `blocks
 
 - ♻️ **True round-trip**: pretty JSON out, minified back in – every other field left byte-for-byte.
 - 🌳 **Whole tree, opt-in**: `--all` dumps every field into one JSON per page; blocks/layout decoded, everything else kept as a raw string.
-- 🔒 **Atomic & validated**: `inject` checks every dataset up front and aborts before a single write if any dataset is malformed.
 - ✋ **No-op safe**: an untouched raw field keeps its exact original bytes – blocks/layout always come back as Kirby's canonical JSON.
 - 🧱 **YAML-safe**: `structure`/`object` fields are never decoded or re-encoded – dumped verbatim, written back verbatim.
 
@@ -129,18 +128,13 @@ By default `extract` only pulls `blocks`/`layout`. Pass `--all` to dump **every*
 
 ## Safety & limits
 
-kirbyferry draws a firm line between two guarantees.
+kirbyferry makes two promises, depending on the field.
 
-**The hard guarantee – `blocks`/`layout`.** These are matched by value shape (`[{ id, type, content }]` → blocks, `[{ id, columns }]` → layout), decoded to real JSON, and re-encoded exactly as Kirby's `json_encode` would (`JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE`, single line). What you edit is validated and re-encoded single-line, so it round-trips byte-for-byte against Kirby's default storage. Blocks and layout are always normalized to that canonical form on inject, so a field an older Kirby or a plugin stored pretty-printed or with escaped slashes is rewritten to match – whether you edited it or not.
+**`blocks`/`layout` round-trip exactly.** Detected by shape, decoded to real JSON, written back in Kirby's canonical single-line form. Legacy content stored pretty-printed is normalized on inject – edited or not.
 
-**The soft guarantee – everything else (`--all`).** Every other field is dumped and written back as a **raw string**; kirbyferry never parses or re-encodes it. That is deliberate for `structure`/`object`: re-encoding YAML from JavaScript cannot reproduce Kirby's PHP handlers (Spyc or Symfony) byte-for-byte. An untouched field keeps its exact bytes, but a raw string you *do* edit is spliced back as-is and not validated – broken YAML surfaces at Kirby runtime, not at inject time. Hand-edited YAML may also be re-normalized on Kirby's next Panel save.
+**Every other field is preserved, not parsed.** With `--all`, text, dates and `structure`/`object` YAML are carried as raw strings and written back verbatim – kirbyferry never re-encodes YAML. An untouched field is always safe; one you *edit* is not validated, so broken YAML only surfaces when Kirby reads it.
 
-Both rest on the same machinery:
-
-- **No-op safe.** Only fields whose values actually changed are rewritten. For a raw string or YAML field that means byte-identical, so untouched older content is never reformatted; for `blocks`/`layout` it means identical to Kirby's canonical JSON, so legacy escaped-slash or pretty-printed storage is normalized on the next inject.
-- **Atomic inject.** Every dataset is validated before anything is touched: unreadable JSON, a value that is neither a string nor a blocks/layout array, a duplicate field in the target, or a missing `.txt` aborts the run before a single write. Stale datasets (source page renamed or deleted) are removed by `extract --clean`.
-- **Divider-bounded.** Replacement is scoped by Kirby's `----` field divider, and a line-start `----` inside a value is escaped `\----` on write – so a line inside another field's value that merely looks like a field can never be rewritten or split.
-- **Trim to match Kirby.** Raw values are trimmed exactly as Kirby's `Txt` encoder trims, so the extracted JSON and the `.txt` never drift over surrounding whitespace.
+`inject` is all-or-nothing: it validates every dataset first and writes nothing if any is malformed.
 
 ## Programmatic API
 

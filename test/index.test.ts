@@ -1,4 +1,4 @@
-import type { StructuredFieldMap } from '../src/index.ts'
+import type { FieldMap } from '../src/index.ts'
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -9,6 +9,7 @@ import {
   extractFields,
   injectFields,
   isStructuredFieldValue,
+  isWritableFieldValue,
   parseFilename,
   parseStructuredField,
   replaceField,
@@ -67,6 +68,14 @@ describe('decodeFields', () => {
     expect(fields.map(field => field.name)).toEqual(['Notes', 'Uuid'])
     expect(fields[0]!.value).toBe('---- not a divider\nplain')
   })
+
+  it('trims values like PHP trim, keeping a boundary NBSP that JS String.trim drops', () => {
+    // ASCII space/tab/newline are stripped, but NBSP is not in PHP trim's charlist,
+    // so Kirby keeps it – common in French typography and machine translation.
+    const nbsp = String.fromCharCode(0xA0)
+    const fields = decodeFields(`Author: \t${nbsp}Jane${nbsp} \n\n----\n\nUuid: x\n`)
+    expect(fields[0]!.value).toBe(`${nbsp}Jane${nbsp}`)
+  })
 })
 
 describe('parseStructuredField', () => {
@@ -108,6 +117,26 @@ describe('isStructuredFieldValue', () => {
     { kind: 'a mixed blocks/layout array', value: [{ id: 'a1', type: 'text', content: {} }, { id: 'l1', columns: [] }] },
   ])('rejects $kind', ({ value }) => {
     expect(isStructuredFieldValue(value)).toBe(false)
+  })
+})
+
+describe('isWritableFieldValue', () => {
+  it.each([
+    { kind: 'a raw string', value: 'a plain value' },
+    { kind: 'an empty string', value: '' },
+    { kind: 'a blocks array', value: [{ id: 'a1', type: 'text', content: {}, isHidden: false }] },
+    { kind: 'a layout array', value: [{ id: 'l1', columns: [] }] },
+  ])('accepts $kind', ({ value }) => {
+    expect(isWritableFieldValue(value)).toBe(true)
+  })
+
+  it.each([
+    { kind: 'a number', value: 3 },
+    { kind: 'a boolean', value: true },
+    { kind: 'null', value: null },
+    { kind: 'a plain object', value: { id: 'a1' } },
+  ])('rejects $kind', ({ value }) => {
+    expect(isWritableFieldValue(value)).toBe(false)
   })
 })
 
@@ -159,9 +188,23 @@ describe('replaceField', () => {
       .toBe('Title: Hi\r\n----\r\nText: [{"a":2}]\r\n----\r\nUuid: x\r\n')
   })
 
-  it('returns undefined for absent or multi-line fields', () => {
+  it('returns undefined for an absent field', () => {
     expect(replaceField(SAMPLE_PAGE, 'Missing', '[]')).toBeUndefined()
-    expect(replaceField(SAMPLE_PAGE, 'Footerlinks', '[]')).toBeUndefined()
+  })
+
+  it('rewrites a multi-line field, reframing it to a single line', () => {
+    const next = replaceField(SAMPLE_PAGE, 'Footerlinks', '[]')
+    expect(next).toContain('Footerlinks: []')
+    expect(next).toContain('Uuid: abc123')
+    // The old YAML body is gone, and the field divider framing is intact.
+    expect(next).not.toContain('title: Example')
+    expect(next).toContain('Footerlinks: []\n\n----\n\nUuid: abc123')
+  })
+
+  it('rewrites a value with multi-line content using blank-line framing', () => {
+    const next = replaceField(SAMPLE_PAGE, 'Title', 'Line one\nLine two')!
+    expect(next).toContain('Title:\n\nLine one\nLine two')
+    expect(decodeFields(next).find(field => field.name === 'Title')!.value).toBe('Line one\nLine two')
   })
 
   it('never rewrites a look-alike line inside another field, even one appearing first', () => {
@@ -173,6 +216,17 @@ describe('replaceField', () => {
   it('returns undefined when only a look-alike line exists, not the field itself', () => {
     const content = 'Description:\n\nText: [1, 2]\nProse after.\n'
     expect(replaceField(content, 'Text', '[9]')).toBeUndefined()
+  })
+
+  it('escapes a line-start ---- in a raw value and round-trips it without minting a field', () => {
+    const seed = 'Notes: seed\n\n----\n\nUuid: x\n'
+    const written = replaceField(seed, 'Notes', 'before\n----\nafter')!
+
+    // The divider inside the value is escaped on disk, like Kirby's Txt::encodeValue.
+    expect(written).toContain('\\----')
+    const fields = decodeFields(written)
+    expect(fields.map(field => field.name)).toEqual(['Notes', 'Uuid'])
+    expect(fields.find(field => field.name === 'Notes')!.value).toBe('before\n----\nafter')
   })
 })
 
@@ -195,7 +249,7 @@ describe('extractFields', () => {
 
     const dataset = JSON.parse(
       await fsp.readFile(path.join(out, 'pages', 'home', 'project.en.json'), 'utf-8'),
-    ) as StructuredFieldMap
+    ) as FieldMap
     expect(Object.keys(dataset)).toEqual(['Text'])
     expect(dataset.Text).toHaveLength(1)
   })
@@ -239,16 +293,22 @@ describe('extractFields', () => {
       await expect(fsp.access(path.join(out, 'pages', 'home', 'project.en.json'))).resolves.toBeUndefined()
     })
 
-    it('keeps datasets outside the field scope', async () => {
+    it('keeps a live page dataset, whatever flags produced it', async () => {
+      // Regression: an `--all` dataset for a page with no blocks/layout must
+      // survive a later plain `extract --clean`. Staleness is decided by whether
+      // the source `.txt` still exists, never by what the current run wrote, so a
+      // forgotten `--all` can't silently delete un-injected edits.
       const { root, out } = workspace
-      await extractFields(root, { out })
-      await fsp.rm(path.join(root, 'pages', 'home'), { recursive: true })
+      await fsp.mkdir(path.join(root, 'pages', 'about'), { recursive: true })
+      await fsp.writeFile(path.join(root, 'pages', 'about', 'default.en.txt'), 'Title: About\n')
 
-      const bodyScoped = await extractFields(root, { out, fields: ['Body'], clean: true })
-      expect(bodyScoped.cleanedDatasets).toEqual([])
+      await extractFields(root, { out, all: true })
+      const scalarDataset = path.join(out, 'pages', 'about', 'default.en.json')
+      await expect(fsp.access(scalarDataset)).resolves.toBeUndefined()
 
-      const textScoped = await extractFields(root, { out, fields: ['text'], clean: true })
-      expect(textScoped.cleanedDatasets).toHaveLength(2)
+      const { cleanedDatasets } = await extractFields(root, { out, clean: true })
+      expect(cleanedDatasets).toEqual([])
+      await expect(fsp.access(scalarDataset)).resolves.toBeUndefined()
     })
   })
 })
@@ -267,7 +327,7 @@ describe('injectFields', () => {
     await extractFields(root, { out })
 
     const jsonPath = path.join(out, 'pages', 'home', 'project.en.json')
-    const dataset = JSON.parse(await fsp.readFile(jsonPath, 'utf-8')) as StructuredFieldMap
+    const dataset = JSON.parse(await fsp.readFile(jsonPath, 'utf-8')) as FieldMap
     ;(dataset.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
     await fsp.writeFile(jsonPath, JSON.stringify(dataset, undefined, 2))
 
@@ -288,7 +348,7 @@ describe('injectFields', () => {
     await extractFields(root, { out })
 
     const jsonPath = path.join(out, 'pages', 'home', 'project.en.json')
-    const dataset = JSON.parse(await fsp.readFile(jsonPath, 'utf-8')) as StructuredFieldMap
+    const dataset = JSON.parse(await fsp.readFile(jsonPath, 'utf-8')) as FieldMap
     ;(dataset.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
     await fsp.writeFile(jsonPath, JSON.stringify(dataset, undefined, 2))
 
@@ -326,28 +386,13 @@ describe('injectFields', () => {
     expect(updatedContent).toMatch(/^Text: \[\]$/m)
   })
 
-  it('leaves legacy escaped-slash JSON untouched when values are unedited', async () => {
-    const { root, out } = workspace
-    // PHP json_encode without JSON_UNESCAPED_SLASHES, as written by older Kirby.
-    const legacyPage = 'Text: [{"content":{"url":"https:\\/\\/example.com\\/a"},"id":"a1","isHidden":false,"type":"text"}]\n'
-    const legacyPath = path.join(root, 'pages', 'home', 'legacy.en.txt')
-    await fsp.writeFile(legacyPath, legacyPage)
-
-    await extractFields(root, { out })
-    const results = await injectFields(root, { out, templates: ['legacy'] })
-
-    expect(results[0]!.hasChanged).toBe(false)
-    expect(results[0]!.fields).toEqual([])
-    expect(await fsp.readFile(legacyPath, 'utf-8')).toBe(legacyPage)
-  })
-
   it('aborts without writing when a dataset holds invalid JSON', async () => {
     const { root, out } = workspace
     await extractFields(root, { out })
 
     // Stage a valid edit alongside the broken dataset to prove atomicity.
     const dePath = path.join(out, 'pages', 'home', 'project.de.json')
-    const dataset = JSON.parse(await fsp.readFile(dePath, 'utf-8')) as StructuredFieldMap
+    const dataset = JSON.parse(await fsp.readFile(dePath, 'utf-8')) as FieldMap
     ;(dataset.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
     await fsp.writeFile(dePath, JSON.stringify(dataset))
     await fsp.writeFile(path.join(out, 'pages', 'home', 'project.en.json'), 'not json')
@@ -362,7 +407,7 @@ describe('injectFields', () => {
     await extractFields(root, { out })
 
     const dePath = path.join(out, 'pages', 'home', 'project.de.json')
-    const dataset = JSON.parse(await fsp.readFile(dePath, 'utf-8')) as StructuredFieldMap
+    const dataset = JSON.parse(await fsp.readFile(dePath, 'utf-8')) as FieldMap
     ;(dataset.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
     await fsp.writeFile(dePath, JSON.stringify(dataset))
     await fsp.writeFile(
@@ -370,7 +415,7 @@ describe('injectFields', () => {
       JSON.stringify({ Text: [{ foo: 1 }] }),
     )
 
-    await expect(injectFields(root, { out })).rejects.toThrow(/not a blocks\/layout value in .*project\.en\.json.*Text/i)
+    await expect(injectFields(root, { out })).rejects.toThrow(/unsupported value in .*project\.en\.json.*Text/i)
     const deContent = await fsp.readFile(path.join(root, 'pages', 'home', 'project.de.txt'), 'utf-8')
     expect(deContent).not.toContain('<p>Edited</p>')
   })
@@ -381,7 +426,7 @@ describe('injectFields', () => {
 
     // Stage a real edit that a successful run would write back...
     const jsonPath = path.join(out, 'pages', 'home', 'project.en.json')
-    const dataset = JSON.parse(await fsp.readFile(jsonPath, 'utf-8')) as StructuredFieldMap
+    const dataset = JSON.parse(await fsp.readFile(jsonPath, 'utf-8')) as FieldMap
     ;(dataset.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
     await fsp.writeFile(jsonPath, JSON.stringify(dataset, undefined, 2))
 
@@ -459,7 +504,7 @@ describe('hostile fixture (corpus-derived edge cases)', () => {
     await extractFields(root, { out })
 
     const jsonPath = path.join(out, 'pages', 'hostile', 'default.json')
-    const dataset = JSON.parse(await fsp.readFile(jsonPath, 'utf-8')) as StructuredFieldMap
+    const dataset = JSON.parse(await fsp.readFile(jsonPath, 'utf-8')) as FieldMap
     ;(dataset.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
     await fsp.writeFile(jsonPath, JSON.stringify(dataset))
 
@@ -476,5 +521,171 @@ describe('hostile fixture (corpus-derived edge cases)', () => {
     expect(updatedContent).toContain('  file: []')
     expect(updatedContent).toContain('\\---- not a divider')
     expect(updatedContent).toContain('Title: Wantalon: Curated Art Tours')
+  })
+})
+
+describe('whole tree (all fields)', () => {
+  let workspace: { root: string, out: string }
+  let fixture: string
+  const pagePath = path.join('pages', 'example', 'page.txt')
+  const datasetPath = path.join('pages', 'example', 'page.json')
+
+  beforeEach(async () => {
+    fixture = await fsp.readFile(path.join(fixturesDir, 'page.txt'), 'utf-8')
+    const root = await fsp.mkdtemp(path.join(os.tmpdir(), 'kirbyferry-content-'))
+    const out = await fsp.mkdtemp(path.join(os.tmpdir(), 'kirbyferry-out-'))
+    await fsp.mkdir(path.dirname(path.join(root, pagePath)), { recursive: true })
+    await fsp.writeFile(path.join(root, pagePath), fixture)
+    workspace = { root, out }
+  })
+
+  afterEach(() => removeWorkspace(workspace))
+
+  async function readDataset(out: string): Promise<FieldMap> {
+    return JSON.parse(await fsp.readFile(path.join(out, datasetPath), 'utf-8')) as FieldMap
+  }
+
+  it('extracts every field – blocks/layout as arrays, the rest as raw strings', async () => {
+    const { root, out } = workspace
+    const { results } = await extractFields(root, { out, all: true })
+
+    expect(results[0]!.fields).toEqual(['Title', 'Text', 'Body', 'Links', 'Meta', 'Empty', 'Uuid'])
+
+    const dataset = await readDataset(out)
+    expect(Array.isArray(dataset.Text)).toBe(true)
+    expect(Array.isArray(dataset.Body)).toBe(true)
+    expect(dataset.Title).toBe('Lorem Ipsum')
+    expect(dataset.Uuid).toBe('loremipsum000001')
+    // YAML is kept verbatim, never decoded.
+    expect(typeof dataset.Links).toBe('string')
+    expect(dataset.Links).toContain('label: Lorem')
+    // An empty array is a raw string, not a decoded (and skipped) blocks value.
+    expect(dataset.Empty).toBe('[]')
+  })
+
+  it('re-injects the whole tree byte-for-byte when nothing is edited', async () => {
+    const { root, out } = workspace
+    await extractFields(root, { out, all: true })
+    const results = await injectFields(root, { out })
+
+    expect(results[0]!.hasChanged).toBe(false)
+    expect(await fsp.readFile(path.join(root, pagePath), 'utf-8')).toBe(fixture)
+  })
+
+  it('rewrites a scalar field, leaving every other field untouched', async () => {
+    const { root, out } = workspace
+    await extractFields(root, { out, all: true })
+
+    const dataset = await readDataset(out)
+    dataset.Title = 'Edited Title'
+    await fsp.writeFile(path.join(out, datasetPath), JSON.stringify(dataset))
+
+    const results = await injectFields(root, { out })
+    expect(results[0]!.fields).toEqual(['Title'])
+
+    const content = await fsp.readFile(path.join(root, pagePath), 'utf-8')
+    expect(content).toMatch(/^Title: Edited Title$/m)
+    expect(content).toContain('Uuid: loremipsum000001')
+    expect(content).toContain('label: Lorem')
+    expect(content).toMatch(/^Text: \[\{.*\}\]$/m)
+  })
+
+  it('rewrites a YAML field verbatim without re-encoding, leaving neighbours untouched', async () => {
+    const { root, out } = workspace
+    await extractFields(root, { out, all: true })
+
+    const dataset = await readDataset(out)
+    dataset.Links = (dataset.Links as string).replace('Lorem', 'Edited')
+    await fsp.writeFile(path.join(out, datasetPath), JSON.stringify(dataset))
+
+    const results = await injectFields(root, { out })
+    expect(results[0]!.fields).toEqual(['Links'])
+
+    const content = await fsp.readFile(path.join(root, pagePath), 'utf-8')
+    // The edited YAML is spliced back with multi-line framing.
+    expect(content).toContain('Links:\n\n-\n  label: Edited')
+    // The object field and the blocks field are untouched.
+    expect(content).toContain('description: Dolor sit amet consectetur.')
+    expect(content).toContain('Consectetur Adipiscing')
+  })
+
+  it('aborts without writing when a value is a number', async () => {
+    const { root, out } = workspace
+    await extractFields(root, { out, all: true })
+    await fsp.writeFile(path.join(out, datasetPath), JSON.stringify({ Uuid: 5 }))
+
+    await expect(injectFields(root, { out })).rejects.toThrow(/unsupported value/i)
+    expect(await fsp.readFile(path.join(root, pagePath), 'utf-8')).toBe(fixture)
+  })
+
+  it('aborts without writing when the content file has a duplicate field', async () => {
+    const { root, out } = workspace
+    const dupPath = path.join('pages', 'dup', 'page.txt')
+    await fsp.mkdir(path.dirname(path.join(root, dupPath)), { recursive: true })
+    await fsp.writeFile(path.join(root, dupPath), 'Title: One\n\n----\n\nTitle: Two\n\n----\n\nUuid: d\n')
+
+    await extractFields(root, { out, all: true })
+
+    const dupDataset = path.join(out, 'pages', 'dup', 'page.json')
+    await fsp.writeFile(dupDataset, JSON.stringify({ Title: 'Edited' }))
+
+    await expect(injectFields(root, { out })).rejects.toThrow(/duplicate field/i)
+  })
+
+  it('injects normally when the duplicated field is not the one being edited', async () => {
+    const { root, out } = workspace
+    const dupPath = path.join('pages', 'dup2', 'page.txt')
+    await fsp.mkdir(path.dirname(path.join(root, dupPath)), { recursive: true })
+    await fsp.writeFile(path.join(root, dupPath), 'Title: One\n\n----\n\nTitle: Two\n\n----\n\nUuid: keep\n')
+
+    await extractFields(root, { out, all: true })
+
+    // Editing only Uuid leaves the ambiguous Title alone, so the abort must not fire.
+    const dupDataset = path.join(out, 'pages', 'dup2', 'page.json')
+    await fsp.writeFile(dupDataset, JSON.stringify({ Uuid: 'edited' }))
+
+    const results = await injectFields(root, { out })
+    expect(results.find(result => result.target.includes('dup2'))?.fields).toEqual(['Uuid'])
+
+    const content = await fsp.readFile(path.join(root, dupPath), 'utf-8')
+    expect(content).toContain('Uuid: edited')
+    expect(content).toContain('Title: One')
+    expect(content).toContain('Title: Two')
+  })
+
+  it('aborts on a duplicate that only collides under Kirby key normalization', async () => {
+    const { root, out } = workspace
+    const dupPath = path.join('pages', 'slug', 'page.txt')
+    await fsp.mkdir(path.dirname(path.join(root, dupPath)), { recursive: true })
+    // Hero-image and Hero_image are one last-wins field to Kirby, two lines on disk.
+    await fsp.writeFile(path.join(root, dupPath), 'Hero-image: a\n\n----\n\nHero_image: b\n\n----\n\nUuid: s\n')
+
+    await extractFields(root, { out, all: true })
+
+    const dupDataset = path.join(out, 'pages', 'slug', 'page.json')
+    await fsp.writeFile(dupDataset, JSON.stringify({ 'Hero-image': 'edited' }))
+
+    await expect(injectFields(root, { out })).rejects.toThrow(/duplicate field/i)
+  })
+
+  it('skips ignored fields on extract and on inject', async () => {
+    const { root, out } = workspace
+    const { results } = await extractFields(root, { out, all: true, ignore: ['uuid', 'empty'] })
+    expect(results[0]!.fields).toEqual(['Title', 'Text', 'Body', 'Links', 'Meta'])
+
+    // Re-extract everything, then edit both Title and Uuid, but ignore Uuid on inject.
+    await extractFields(root, { out, all: true })
+    const dataset = await readDataset(out)
+    dataset.Title = 'Edited Title'
+    dataset.Uuid = 'edited-uuid'
+    await fsp.writeFile(path.join(out, datasetPath), JSON.stringify(dataset))
+
+    const injectResults = await injectFields(root, { out, ignore: ['uuid'] })
+    expect(injectResults[0]!.fields).toEqual(['Title'])
+
+    const content = await fsp.readFile(path.join(root, pagePath), 'utf-8')
+    expect(content).toContain('Title: Edited Title')
+    expect(content).toContain('Uuid: loremipsum000001')
+    expect(content).not.toContain('edited-uuid')
   })
 })

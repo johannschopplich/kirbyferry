@@ -1,4 +1,4 @@
-import type { StructuredFieldMap } from '../src/index.ts'
+import type { FieldMap } from '../src/index.ts'
 import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
@@ -60,7 +60,7 @@ describe('content tree round-trip', () => {
     await extractFields(root, { out })
 
     const datasetPath = path.join(out, '2_blog', '1_lorem-ipsum-dolor', 'article.en.json')
-    const dataset = JSON.parse(await fsp.readFile(datasetPath, 'utf-8')) as StructuredFieldMap
+    const dataset = JSON.parse(await fsp.readFile(datasetPath, 'utf-8')) as FieldMap
     ;(dataset.Text![0] as unknown as { content: { text: string } }).content.text = 'Edited Chapter'
     await fsp.writeFile(datasetPath, JSON.stringify(dataset, undefined, 2))
 

@@ -14,6 +14,16 @@ export async function isDirectory(target: string): Promise<boolean> {
   }
 }
 
+export async function fileExists(target: string): Promise<boolean> {
+  try {
+    await fsp.access(target)
+    return true
+  }
+  catch {
+    return false
+  }
+}
+
 /** Recursively collects matching files, each with its parsed template and language. */
 export async function findFiles(
   root: string,

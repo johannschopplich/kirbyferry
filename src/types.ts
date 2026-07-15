@@ -49,8 +49,11 @@ export interface StructuredField {
   value: ContentBlock[] | LayoutRow[]
 }
 
-/** Field-keyed map written to / read from an extracted JSON file. */
-export type StructuredFieldMap = Record<string, ContentBlock[] | LayoutRow[]>
+/**
+ * Field-keyed map written to / read from an extracted JSON file. `blocks`/`layout`
+ * fields are decoded to arrays; every other field is kept as its raw string.
+ */
+export type FieldMap = Record<string, ContentBlock[] | LayoutRow[] | string>
 
 /** Selection filters shared by extract and inject. */
 export interface FilterOptions {
@@ -58,13 +61,20 @@ export interface FilterOptions {
   out?: string
   /** Language codes to include (default: all detected). */
   langs?: string[]
-  /** Field names to include (default: all blocks/layout fields). */
+  /** Field names to include (default: all). */
   fields?: string[]
+  /** Field names to skip, even when otherwise in scope (e.g. `uuid`, `sort`). */
+  ignore?: string[]
   /** Template names to include (default: all). */
   templates?: string[]
 }
 
 export interface ExtractOptions extends FilterOptions {
+  /**
+   * Extract every field, not just `blocks`/`layout`. Non-structured fields are
+   * written as their raw string; YAML `structure`/`object` fields are never decoded.
+   */
+  all?: boolean
   /** Remove stale dataset files within the filter scope after extracting. */
   clean?: boolean
 }

@@ -12,9 +12,31 @@ const FIELD_SEPARATOR = /\n----\s*/g
 /** A `\----`-escaped divider at line start, as written by Kirby's `Txt::encodeValue`. */
 const ESCAPED_DIVIDER = /(?<=^|\n)\\----/g
 
-/** U+2028/U+2029 line separators, escaped to keep field values on one line. */
+/** The inverse of `ESCAPED_DIVIDER`: a line-start `----` that must be escaped on write. */
+const UNESCAPED_DIVIDER = /(?<=^|\n)----/g
+
+/**
+ * Kirby's `\R` set, matched without `/u` (`preg_match('!\R!', …)`), so on UTF-8
+ * content U+0085/U+2028/U+2029 are byte sequences, not breaks. Any of these forces
+ * a value onto multiple lines (`Txt::encodeResult`).
+ */
+const LINE_BREAK = /\r\n|[\n\r\v\f]/
+
+/** U+2028/U+2029 line separators, escaped to keep serialized JSON on one line. */
 const LINE_SEPARATOR = String.fromCharCode(0x2028)
 const PARAGRAPH_SEPARATOR = String.fromCharCode(0x2029)
+
+/** PHP `trim()`'s default charlist: space, tab, CR, LF, NUL, vertical tab. */
+const KIRBY_WHITESPACE = /^[ \t\n\r\0\v]+|[ \t\n\r\0\v]+$/g
+
+/**
+ * Trims a value with Kirby's PHP `trim()` semantics. JS `String.trim` would also
+ * strip NBSP and other Unicode spaces Kirby keeps, silently altering a value's
+ * boundary whitespace.
+ */
+export function trimKirby(value: string): string {
+  return value.replace(KIRBY_WHITESPACE, '')
+}
 
 /**
  * Splits Kirby content-file text into its raw `Key: value` fields, unescaping
@@ -33,7 +55,7 @@ export function decodeFields(content: string): RawField[] {
     if (!name)
       continue
 
-    const value = chunk.slice(colonIndex + 1).trim().replace(ESCAPED_DIVIDER, '----')
+    const value = trimKirby(chunk.slice(colonIndex + 1)).replace(ESCAPED_DIVIDER, '----')
     fields.push({ name, value })
   }
 
@@ -42,7 +64,7 @@ export function decodeFields(content: string): RawField[] {
 
 /**
  * Sniffs a serialized `blocks` or `layout` value by shape; returns `undefined`
- * for YAML structures, scalars, and empty arrays – anything inject must not touch.
+ * for YAML structures, scalars, and empty arrays – none safe to re-encode as JSON.
  */
 export function parseStructuredField(field: RawField): StructuredField | undefined {
   if (!field.value.startsWith('['))
@@ -69,11 +91,10 @@ export function parseStructuredField(field: RawField): StructuredField | undefin
 }
 
 /**
- * Replaces a single-line field value within a content file, leaving every other
- * field untouched; returns `undefined` if the field is absent or stored across
- * multiple lines. Candidates are bounded by Kirby's field divider, so a
- * look-alike `Name: [...]` line inside another field's multiline value can
- * never be rewritten.
+ * Replaces a field's value in a content file, leaving every other field untouched;
+ * returns `undefined` if the field is absent. Candidates are bounded by Kirby's
+ * field divider, so a look-alike `Name: [...]` line inside another field's value
+ * can never be rewritten.
  */
 export function replaceField(content: string, name: string, value: string): string | undefined {
   if (!name)
@@ -94,23 +115,27 @@ export function replaceField(content: string, name: string, value: string): stri
 }
 
 /**
- * The line terminator – a bare `\r` on CRLF content, or the whitespace before the
- * next divider – is preserved, so rewriting a field can't disturb surrounding bytes.
+ * Rewrites a field's value with Kirby's own framing – a space for single-line
+ * values, a blank line for multi-line ones (`Txt::encodeResult`) – trimming and
+ * re-escaping line-start `----` exactly as `Txt::encodeValue` does. The line
+ * terminator before the next divider (a bare `\r` on CRLF content, or the newline
+ * run) is preserved, so surrounding bytes are never disturbed.
  */
 function replaceChunkValue(chunk: string, name: string, value: string): string | undefined {
   const colonIndex = chunk.indexOf(':')
   if (colonIndex === -1 || chunk.slice(0, colonIndex).trim() !== name)
     return undefined
 
-  // Drop stray horizontal whitespace after the closing bracket so a hand-edited
-  // line is still matched and normalized, but keep the line ending: a trailing
-  // `\r` (CRLF divider) or `\n…` must be re-emitted, or rewriting one field would
-  // flip it to LF and leave the file with mixed endings.
-  const valueMatch = /^[^\S\n]*\[.*\][^\S\r\n]*(\r?\n\s*|\r)?$/.exec(chunk.slice(colonIndex + 1))
-  if (!valueMatch)
-    return undefined
+  // Keep the terminator (from its first line break onward) but drop horizontal
+  // whitespace on the value's own line, so a hand-edited `Key: value   ` and a
+  // multi-line field both normalize the way Kirby's trim-on-encode would.
+  const trailingWhitespace = /\s*$/.exec(chunk.slice(colonIndex + 1))![0]
+  const lineBreak = LINE_BREAK.exec(trailingWhitespace)
+  const terminator = lineBreak ? trailingWhitespace.slice(lineBreak.index) : ''
 
-  return `${chunk.slice(0, colonIndex + 1)} ${value}${valueMatch[1] ?? ''}`
+  const escapedValue = trimKirby(value).replace(UNESCAPED_DIVIDER, '\\----')
+  const framing = LINE_BREAK.test(escapedValue) ? '\n\n' : ' '
+  return `${chunk.slice(0, colonIndex + 1)}${framing}${escapedValue}${terminator}`
 }
 
 /**
@@ -129,6 +154,11 @@ export function encodeFieldValue(value: unknown): string {
 export function isStructuredFieldValue(value: unknown): value is ContentBlock[] | LayoutRow[] {
   return Array.isArray(value)
     && (value.length === 0 || value.every(isLayoutRow) || value.every(isContentBlock))
+}
+
+/** Whether a value can be serialized back into a content file. */
+export function isWritableFieldValue(value: unknown): value is string | ContentBlock[] | LayoutRow[] {
+  return typeof value === 'string' || isStructuredFieldValue(value)
 }
 
 function isLayoutRow(item: unknown): boolean {

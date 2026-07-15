@@ -5,6 +5,7 @@ export {
   decodeFields,
   encodeFieldValue,
   isStructuredFieldValue,
+  isWritableFieldValue,
   parseStructuredField,
   replaceField,
 } from './kirby.ts'
@@ -13,6 +14,7 @@ export type {
   ExtractOptions,
   ExtractReport,
   ExtractResult,
+  FieldMap,
   FieldType,
   FilterOptions,
   InjectOptions,
@@ -21,7 +23,6 @@ export type {
   ParsedFilename,
   RawField,
   StructuredField,
-  StructuredFieldMap,
   TreeFile,
 } from './types.ts'
 export { findFiles, resolveContentRoot } from './utils/fs.ts'

@@ -31,7 +31,12 @@ const sharedArgs = {
   field: {
     type: 'string',
     alias: 'f',
-    description: 'Comma-separated field names (default: all blocks/layout fields)',
+    description: 'Comma-separated field names to include (default: all)',
+  },
+  ignore: {
+    type: 'string',
+    alias: 'i',
+    description: 'Comma-separated field names to skip (e.g. uuid,sort)',
   },
   template: {
     type: 'string',
@@ -43,10 +48,16 @@ const sharedArgs = {
 const extract = defineCommand({
   meta: {
     name: 'extract',
-    description: 'Extract blocks/layout fields into editable JSON',
+    description: 'Extract blocks/layout fields (or, with --all, the whole tree) into editable JSON',
   },
   args: {
     ...sharedArgs,
+    all: {
+      type: 'boolean',
+      alias: 'a',
+      description: 'Extract every field, not just blocks/layout (raw strings for the rest)',
+      default: false,
+    },
     clean: {
       type: 'boolean',
       description: 'Remove stale dataset files within the filter scope',
@@ -59,10 +70,12 @@ const extract = defineCommand({
       out: args.out,
       langs: parseList(args.lang),
       fields: parseList(args.field),
+      ignore: parseList(args.ignore),
       templates: parseList(args.template),
+      all: args.all,
       clean: args.clean,
     })
-    reportExtract(report, args.out)
+    reportExtract(report, args.out, args.all)
   },
 })
 
@@ -87,6 +100,7 @@ const inject = defineCommand({
         out: args.out,
         langs: parseList(args.lang),
         fields: parseList(args.field),
+        ignore: parseList(args.ignore),
         templates: parseList(args.template),
         dryRun: args['dry-run'],
       })
@@ -141,12 +155,12 @@ function printTree(rows: [string, string][]): void {
   }
 }
 
-function reportExtract(report: ExtractReport, out: string): void {
+function reportExtract(report: ExtractReport, out: string, all: boolean): void {
   header()
   const { results, cleanedDatasets } = report
 
   if (results.length === 0 && cleanedDatasets.length === 0) {
-    log.info('No blocks or layout fields found.')
+    log.info(all ? 'No fields found.' : 'No blocks or layout fields found.')
     return
   }
 
@@ -182,7 +196,7 @@ function reportInject(results: InjectResult[], dryRun: boolean): void {
   }
 
   for (const item of skippedFields)
-    log.warn(`Skipped (not a single-line blocks/layout field): ${item}`)
+    log.warn(`Skipped (no such field in the content file): ${item}`)
 
   const total = changedFiles.reduce((sum, result) => sum + result.fields.length, 0)
   const verb = dryRun ? 'Would inject' : 'Injected'

@@ -22,7 +22,10 @@ export function contentFilename(file: ParsedFilename, extension: string): string
   return file.lang ? `${file.template}.${file.lang}${extension}` : `${file.template}${extension}`
 }
 
-/** Case-insensitive membership test; an absent filter matches everything. */
 export function matchesFilter(filter: string[] | undefined, value: string): boolean {
   return !filter || filter.some(item => item.toLowerCase() === value.toLowerCase())
+}
+
+export function isExcluded(ignore: string[] | undefined, value: string): boolean {
+  return !!ignore && ignore.some(item => item.toLowerCase() === value.toLowerCase())
 }

@@ -1,32 +1,38 @@
-import type { ExtractOptions, ExtractReport, ExtractResult, FilterOptions, StructuredFieldMap } from './types.ts'
+import type { ExtractOptions, ExtractReport, ExtractResult, FieldMap, FilterOptions } from './types.ts'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { DEFAULT_OUT_DIR } from './defaults.ts'
 import { decodeFields, parseStructuredField } from './kirby.ts'
-import { findFiles, isDirectory } from './utils/fs.ts'
-import { contentFilename, matchesFilter } from './utils/tree.ts'
+import { fileExists, findFiles, isDirectory } from './utils/fs.ts'
+import { contentFilename, isExcluded, matchesFilter } from './utils/tree.ts'
 
-/** Extracts only `blocks` and `layout` fields; other field types are ignored. */
+/**
+ * Extracts `blocks` and `layout` fields into JSON. With `all`, every other field
+ * is extracted too – as its raw string, since YAML `structure`/`object` fields
+ * are never decoded.
+ */
 export async function extractFields(
   contentRoot: string,
   options: ExtractOptions = {},
 ): Promise<ExtractReport> {
-  const { out = DEFAULT_OUT_DIR, langs, fields, templates, clean = false } = options
+  const { out = DEFAULT_OUT_DIR, langs, fields, ignore, templates, all = false, clean = false } = options
   const outDir = path.resolve(out)
   const results: ExtractResult[] = []
-  const writtenDatasets = new Set<string>()
 
   for (const file of await findFiles(contentRoot, '.txt', { langs, templates })) {
     const content = await fsp.readFile(file.path, 'utf-8')
-    const fieldMap: StructuredFieldMap = {}
+    const fieldMap: FieldMap = {}
 
     for (const rawField of decodeFields(content)) {
-      if (!matchesFilter(fields, rawField.name))
+      if (!matchesFilter(fields, rawField.name) || isExcluded(ignore, rawField.name))
         continue
 
       const field = parseStructuredField(rawField)
       if (field)
         fieldMap[field.name] = field.value
+      else if (all)
+        // A duplicate key collapses last-wins, mirroring Kirby's own decode.
+        fieldMap[rawField.name] = rawField.value
     }
 
     const fieldNames = Object.keys(fieldMap)
@@ -38,7 +44,6 @@ export async function extractFields(
 
     await fsp.mkdir(path.dirname(outputPath), { recursive: true })
     await fsp.writeFile(outputPath, `${JSON.stringify(fieldMap, undefined, 2)}\n`)
-    writtenDatasets.add(datasetPath)
 
     results.push({
       source: path.relative(contentRoot, file.path),
@@ -48,21 +53,21 @@ export async function extractFields(
   }
 
   const cleanedDatasets = clean
-    ? await removeStaleDatasets(outDir, writtenDatasets, { langs, fields, templates })
+    ? await removeStaleDatasets(outDir, contentRoot, { langs, templates })
     : []
 
   return { results, cleanedDatasets }
 }
 
 /**
- * Scoped to what the active filters own: language/template-matched and, when a
- * field filter is active, holding at least one matching key. Unreadable JSON is
- * left in place – deleting what cannot be parsed risks destroying edits.
+ * Removes datasets whose backing content file no longer exists – the page was
+ * renamed or deleted. The language/template filter scopes which datasets are
+ * considered; a dataset whose source still exists is always kept.
  */
 async function removeStaleDatasets(
   outDir: string,
-  writtenDatasets: Set<string>,
-  { langs, fields, templates }: FilterOptions,
+  contentRoot: string,
+  { langs, templates }: FilterOptions,
 ): Promise<string[]> {
   if (!(await isDirectory(outDir)))
     return []
@@ -70,25 +75,12 @@ async function removeStaleDatasets(
   const cleanedDatasets: string[] = []
 
   for (const file of await findFiles(outDir, '.json', { langs, templates })) {
-    const datasetPath = path.join(file.folder, contentFilename(file, '.json'))
-    if (writtenDatasets.has(datasetPath))
+    const sourcePath = path.join(contentRoot, file.folder, contentFilename(file, '.txt'))
+    if (await fileExists(sourcePath))
       continue
 
-    if (fields) {
-      let fieldMap: StructuredFieldMap
-      try {
-        fieldMap = JSON.parse(await fsp.readFile(file.path, 'utf-8')) as StructuredFieldMap
-      }
-      catch {
-        continue
-      }
-
-      if (!Object.keys(fieldMap).some(name => matchesFilter(fields, name)))
-        continue
-    }
-
     await fsp.rm(file.path)
-    cleanedDatasets.push(datasetPath)
+    cleanedDatasets.push(path.join(file.folder, contentFilename(file, '.json')))
   }
 
   return cleanedDatasets

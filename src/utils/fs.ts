@@ -3,6 +3,7 @@ import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import process from 'node:process'
 import { CONTENT_ROOT_CANDIDATES } from '../defaults.ts'
+import { CliError } from '../errors.ts'
 import { matchesFilter, parseFilename } from './tree.ts'
 
 export async function isDirectory(target: string): Promise<boolean> {
@@ -63,7 +64,7 @@ export async function resolveContentRoot(
   if (contentDir) {
     const resolvedPath = path.resolve(cwd, contentDir)
     if (!(await isDirectory(resolvedPath)))
-      throw new Error(`Not a directory: ${resolvedPath}`)
+      throw new CliError(`Not a directory: ${resolvedPath}`)
     return resolvedPath
   }
 
@@ -73,7 +74,7 @@ export async function resolveContentRoot(
       return resolvedPath
   }
 
-  throw new Error(
+  throw new CliError(
     `No Kirby content directory found (tried ${CONTENT_ROOT_CANDIDATES.join(', ')})`,
   )
 }

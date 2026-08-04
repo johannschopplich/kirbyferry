@@ -6,12 +6,14 @@ import * as ansis from 'ansis'
 import { defineCommand } from 'citty'
 import packageJson from '../package.json' with { type: 'json' }
 import { CONTENT_ROOT_CANDIDATES, DEFAULT_OUT_DIR } from './defaults.ts'
+import { commonArgs, withCleanErrors } from './errors.ts'
 import { extractFields } from './extract.ts'
 import { injectFields } from './inject.ts'
 import * as log from './log.ts'
 import { resolveContentRoot } from './utils/fs.ts'
 
 const sharedArgs = {
+  ...commonArgs,
   dir: {
     type: 'positional',
     description: `Kirby content root (default: auto-detect ${CONTENT_ROOT_CANDIDATES.map(dir => `./${dir}`).join(' or ')})`,
@@ -105,27 +107,6 @@ const inject = defineCommand({
     reportInject(results, args['dry-run'])
   },
 })
-
-// citty's `runMain` prints the raw error object and exits, with no formatting
-// hook, so the clean-message boundary has to wrap each subcommand's run.
-function withCleanErrors<T extends ArgsDef>(command: CommandDef<T>): CommandDef<T> {
-  const run = command.run
-  if (run === undefined)
-    return command
-
-  return {
-    ...command,
-    async run(context) {
-      try {
-        return await run(context)
-      }
-      catch (caught) {
-        log.error(caught instanceof Error ? caught.message : String(caught))
-        process.exitCode = 1
-      }
-    },
-  }
-}
 
 export const mainCommand: CommandDef = defineCommand({
   meta: {

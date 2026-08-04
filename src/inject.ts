@@ -2,6 +2,7 @@ import type { FieldMap, InjectOptions, InjectResult } from './types.ts'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { DEFAULT_OUT_DIR } from './defaults.ts'
+import { CliError } from './errors.ts'
 import { decodeFields, encodeFieldValue, isWritableFieldValue, replaceField, trimKirby } from './kirby.ts'
 import { findFiles } from './utils/fs.ts'
 import { contentFilename, isExcluded, matchesFilter } from './utils/tree.ts'
@@ -117,7 +118,7 @@ export async function injectFields(
     const hint = hasMissingTargets
       ? '\nRe-run extract with --clean to drop stale datasets.'
       : ''
-    throw new Error(
+    throw new CliError(
       `Nothing was injected:\n${abortReasons.map(reason => `  ${reason}`).join('\n')}${hint}`,
     )
   }

@@ -29,7 +29,7 @@ describe('kirbyferry CLI', () => {
 
       expect(exitCode).toBeUndefined()
       expect(stderr).toContain('Extracted')
-      // Only `Text` is structured – `Title` and `Uuid` need `--all`
+      // Only `Text` is structured – `Title` and `Uuid` need `--all`.
       expect(Object.keys(dataset)).toEqual(['Text'])
     })
   })
@@ -50,7 +50,7 @@ describe('kirbyferry CLI', () => {
       expect(exitCode).toBeUndefined()
       expect(stderr).toContain('Injected')
       expect(content).toContain('<p>Goodbye</p>')
-      // Untouched fields survive the rewrite
+      // Untouched fields survive the rewrite.
       expect(content).toContain('Title: Home')
       expect(content).toContain('Uuid: home')
     })

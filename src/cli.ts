@@ -1,9 +1,9 @@
-import type { ArgsDef } from 'citty'
+import type { ArgsDef, CommandDef } from 'citty'
 import type { ExtractReport, InjectResult } from './types.ts'
 import * as path from 'node:path'
 import process from 'node:process'
 import * as ansis from 'ansis'
-import { defineCommand, runMain } from 'citty'
+import { defineCommand } from 'citty'
 import packageJson from '../package.json' with { type: 'json' }
 import { CONTENT_ROOT_CANDIDATES, DEFAULT_OUT_DIR } from './defaults.ts'
 import { extractFields } from './extract.ts'
@@ -65,7 +65,7 @@ const extract = defineCommand({
     },
   },
   async run({ args }) {
-    const contentRoot = await resolveRoot(args.dir)
+    const contentRoot = await resolveContentRoot(args.dir)
     const report = await extractFields(contentRoot, {
       out: args.out,
       langs: parseList(args.lang),
@@ -93,44 +93,51 @@ const inject = defineCommand({
     },
   },
   async run({ args }) {
-    const contentRoot = await resolveRoot(args.dir)
-    let results: InjectResult[]
-    try {
-      results = await injectFields(contentRoot, {
-        out: args.out,
-        langs: parseList(args.lang),
-        fields: parseList(args.field),
-        ignore: parseList(args.ignore),
-        templates: parseList(args.template),
-        dryRun: args['dry-run'],
-      })
-    }
-    catch (error) {
-      log.error((error as Error).message)
-      process.exit(1)
-    }
+    const contentRoot = await resolveContentRoot(args.dir)
+    const results = await injectFields(contentRoot, {
+      out: args.out,
+      langs: parseList(args.lang),
+      fields: parseList(args.field),
+      ignore: parseList(args.ignore),
+      templates: parseList(args.template),
+      dryRun: args['dry-run'],
+    })
     reportInject(results, args['dry-run'])
   },
 })
 
-const main = defineCommand({
+// citty's `runMain` prints the raw error object and exits, with no formatting
+// hook, so the clean-message boundary has to wrap each subcommand's run.
+function withCleanErrors<T extends ArgsDef>(command: CommandDef<T>): CommandDef<T> {
+  const run = command.run
+  if (run === undefined)
+    return command
+
+  return {
+    ...command,
+    async run(context) {
+      try {
+        return await run(context)
+      }
+      catch (caught) {
+        log.error(caught instanceof Error ? caught.message : String(caught))
+        process.exitCode = 1
+      }
+    },
+  }
+}
+
+export const mainCommand: CommandDef = defineCommand({
   meta: {
     name: packageJson.name,
     version: packageJson.version,
     description: packageJson.description,
   },
-  subCommands: { extract, inject },
+  subCommands: {
+    extract: withCleanErrors(extract),
+    inject: withCleanErrors(inject),
+  },
 })
-
-async function resolveRoot(contentDir: string | undefined): Promise<string> {
-  try {
-    return await resolveContentRoot(contentDir)
-  }
-  catch (error) {
-    log.error((error as Error).message)
-    process.exit(1)
-  }
-}
 
 function parseList(value: string | undefined): string[] | undefined {
   if (!value)
@@ -142,7 +149,7 @@ function parseList(value: string | undefined): string[] | undefined {
 
 function header(): void {
   log.info(`${ansis.bold(packageJson.name)} ${ansis.dim(`v${packageJson.version}`)}`)
-  console.log()
+  log.blankLine()
 }
 
 function printTree(rows: [string, string][]): void {
@@ -151,7 +158,7 @@ function printTree(rows: [string, string][]): void {
   for (const [i, [label, detail]] of rows.entries()) {
     const branch = i === rows.length - 1 ? '└─' : '├─'
     const padding = ' '.repeat(width - label.length + 2)
-    console.log(`  ${ansis.dim(branch)} ${ansis.cyan(label)}${padding}${detail}`)
+    process.stderr.write(`  ${ansis.dim(branch)} ${ansis.cyan(label)}${padding}${detail}\n`)
   }
 }
 
@@ -166,7 +173,7 @@ function reportExtract(report: ExtractReport, out: string, all: boolean): void {
 
   if (results.length > 0) {
     printTree(results.map(result => [result.output, result.fields.join(ansis.dim(', '))]))
-    console.log()
+    log.blankLine()
   }
 
   for (const datasetPath of cleanedDatasets)
@@ -192,7 +199,7 @@ function reportInject(results: InjectResult[], dryRun: boolean): void {
 
   if (changedFiles.length > 0) {
     printTree(changedFiles.map(result => [result.target, result.fields.join(ansis.dim(', '))]))
-    console.log()
+    log.blankLine()
   }
 
   for (const item of skippedFields)
@@ -204,5 +211,3 @@ function reportInject(results: InjectResult[], dryRun: boolean): void {
     `${verb} ${ansis.bold(String(total))} field(s) into ${ansis.bold(String(changedFiles.length))} file(s)`,
   )
 }
-
-runMain(main)

@@ -2,13 +2,17 @@ import type { ArgsDef, CommandDef } from 'utilful/cli'
 import type { ExtractReport, InjectResult } from './types.ts'
 import * as path from 'node:path'
 import process from 'node:process'
-import * as ansis from 'ansis'
+import { styleText } from 'node:util'
 import { commonArgs, defineCommand, log } from 'utilful/cli'
 import packageJson from '../package.json' with { type: 'json' }
 import { CONTENT_ROOT_CANDIDATES, DEFAULT_OUT_DIR } from './defaults.ts'
 import { extractFields } from './extract.ts'
 import { injectFields } from './inject.ts'
 import { resolveContentRoot } from './utils/fs.ts'
+
+function color(style: Parameters<typeof styleText>[0], text: string): string {
+  return styleText(style, text, { stream: process.stderr })
+}
 
 const sharedArgs = {
   ...commonArgs,
@@ -124,7 +128,7 @@ function parseList(value: string | undefined): string[] | undefined {
 }
 
 function header(): void {
-  log.info(`${ansis.bold(packageJson.name)} ${ansis.dim(`v${packageJson.version}`)}`)
+  log.info(`${color('bold', packageJson.name)} ${color('dim', `v${packageJson.version}`)}`)
   log.blankLine()
 }
 
@@ -134,7 +138,7 @@ function printTree(rows: [string, string][]): void {
   for (const [i, [label, detail]] of rows.entries()) {
     const branch = i === rows.length - 1 ? '└─' : '├─'
     const padding = ' '.repeat(width - label.length + 2)
-    process.stderr.write(`  ${ansis.dim(branch)} ${ansis.cyan(label)}${padding}${detail}\n`)
+    process.stderr.write(`  ${color('dim', branch)} ${color('cyan', label)}${padding}${detail}\n`)
   }
 }
 
@@ -148,7 +152,7 @@ function reportExtract(report: ExtractReport, out: string, all: boolean): void {
   }
 
   if (results.length > 0) {
-    printTree(results.map(result => [result.output, result.fields.join(ansis.dim(', '))]))
+    printTree(results.map(result => [result.output, result.fields.join(color('dim', ', '))]))
     log.blankLine()
   }
 
@@ -157,7 +161,7 @@ function reportExtract(report: ExtractReport, out: string, all: boolean): void {
 
   const total = results.reduce((sum, result) => sum + result.fields.length, 0)
   const target = path.relative(process.cwd(), path.resolve(out))
-  log.success(`Extracted ${ansis.bold(String(total))} field(s) to ${ansis.cyan(target)}`)
+  log.success(`Extracted ${color('bold', String(total))} field(s) to ${color('cyan', target)}`)
 }
 
 function reportInject(results: InjectResult[], dryRun: boolean): void {
@@ -165,7 +169,7 @@ function reportInject(results: InjectResult[], dryRun: boolean): void {
 
   const changedFiles = results.filter(result => result.hasChanged)
   const skippedFields = results.flatMap(result =>
-    result.skippedFields.map(name => `${result.target} ${ansis.dim('→')} ${name}`),
+    result.skippedFields.map(name => `${result.target} ${color('dim', '→')} ${name}`),
   )
 
   if (changedFiles.length === 0 && skippedFields.length === 0) {
@@ -174,7 +178,7 @@ function reportInject(results: InjectResult[], dryRun: boolean): void {
   }
 
   if (changedFiles.length > 0) {
-    printTree(changedFiles.map(result => [result.target, result.fields.join(ansis.dim(', '))]))
+    printTree(changedFiles.map(result => [result.target, result.fields.join(color('dim', ', '))]))
     log.blankLine()
   }
 
@@ -184,6 +188,6 @@ function reportInject(results: InjectResult[], dryRun: boolean): void {
   const total = changedFiles.reduce((sum, result) => sum + result.fields.length, 0)
   const verb = dryRun ? 'Would inject' : 'Injected'
   log.success(
-    `${verb} ${ansis.bold(String(total))} field(s) into ${ansis.bold(String(changedFiles.length))} file(s)`,
+    `${verb} ${color('bold', String(total))} field(s) into ${color('bold', String(changedFiles.length))} file(s)`,
   )
 }

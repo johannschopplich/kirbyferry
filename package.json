@@ -53,7 +53,6 @@
   "devDependencies": {
     "@antfu/eslint-config": "^9.2.0",
     "@types/node": "^26.1.2",
-    "ansis": "^4.3.1",
     "bumpp": "^12.1.1",
     "eslint": "^10.8.0",
     "eslint-flat-config-utils": "^3.2.0",

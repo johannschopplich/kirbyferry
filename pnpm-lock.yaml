@@ -14,9 +14,6 @@ importers:
       '@types/node':
         specifier: ^26.1.2
         version: 26.1.2
-      ansis:
-        specifier: ^4.3.1
-        version: 4.3.1
       bumpp:
         specifier: ^12.1.1
         version: 12.1.1

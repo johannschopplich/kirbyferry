@@ -20,9 +20,6 @@ importers:
       bumpp:
         specifier: ^12.1.1
         version: 12.1.1
-      citty:
-        specifier: ^0.2.2
-        version: 0.2.2
       eslint:
         specifier: ^10.8.0
         version: 10.8.0(jiti@2.7.0)
@@ -38,6 +35,9 @@ importers:
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
+      utilful:
+        specifier: link:../utils
+        version: link:../utils
       vitest:
         specifier: ^4.1.10
         version: 4.1.10(@types/node@26.1.2)(vite@8.2.0(@types/node@26.1.2)(jiti@2.7.0)(yaml@2.9.0))
@@ -727,9 +727,6 @@ packages:
   ci-info@4.4.0:
     resolution: {integrity: sha512-77PSwercCZU2Fc4sX94eF8k8Pxte6JAwL4/ICZLFjJLqegs7kCuAsqqj/70NQF6TvDpgFjkubQB2FW2ZZddvQg==}
     engines: {node: '>=8'}
-
-  citty@0.2.2:
-    resolution: {integrity: sha512-+6vJA3L98yv+IdfKGZHBNiGW5KHn22e/JwID0Strsz8h4S/csAu/OuICwxrg44k5MRiZHWIo8XXuJgQTriRP4w==}
 
   commander@8.3.0:
     resolution: {integrity: sha512-OkTL9umf+He2DZkUq8f8J9of7yL6RJKI24dVITBmNfZBmri9zYZQrKkuXiKhyfPSu8tUhnVBB1iKXevvnlR4Ww==}
@@ -2580,8 +2577,6 @@ snapshots:
   character-entities@2.0.2: {}
 
   ci-info@4.4.0: {}
-
-  citty@0.2.2: {}
 
   commander@8.3.0: {}
 

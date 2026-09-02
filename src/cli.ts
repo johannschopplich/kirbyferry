@@ -1,15 +1,13 @@
-import type { ArgsDef, CommandDef } from 'citty'
+import type { ArgsDef, CommandDef } from 'utilful/cli'
 import type { ExtractReport, InjectResult } from './types.ts'
 import * as path from 'node:path'
 import process from 'node:process'
 import * as ansis from 'ansis'
-import { defineCommand } from 'citty'
+import { commonArgs, defineCommand, log } from 'utilful/cli'
 import packageJson from '../package.json' with { type: 'json' }
 import { CONTENT_ROOT_CANDIDATES, DEFAULT_OUT_DIR } from './defaults.ts'
-import { commonArgs, withCleanErrors } from './errors.ts'
 import { extractFields } from './extract.ts'
 import { injectFields } from './inject.ts'
-import * as log from './log.ts'
 import { resolveContentRoot } from './utils/fs.ts'
 
 const sharedArgs = {
@@ -58,12 +56,10 @@ const extract = defineCommand({
       type: 'boolean',
       alias: 'a',
       description: 'Extract every field, not just blocks/layout (raw strings for the rest)',
-      default: false,
     },
     clean: {
       type: 'boolean',
       description: 'Remove stale dataset files within the filter scope',
-      default: false,
     },
   },
   async run({ args }) {
@@ -91,7 +87,6 @@ const inject = defineCommand({
     'dry-run': {
       type: 'boolean',
       description: 'Report changes without writing',
-      default: false,
     },
   },
   async run({ args }) {
@@ -115,8 +110,8 @@ export const mainCommand: CommandDef = defineCommand({
     description: packageJson.description,
   },
   subCommands: {
-    extract: withCleanErrors(extract),
-    inject: withCleanErrors(inject),
+    extract,
+    inject,
   },
 })
 

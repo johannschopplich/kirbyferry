@@ -2,8 +2,8 @@ import type { TreeFile } from '../types.ts'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import process from 'node:process'
+import { CliError } from 'utilful/cli'
 import { CONTENT_ROOT_CANDIDATES } from '../defaults.ts'
-import { CliError } from '../errors.ts'
 import { matchesFilter, parseFilename } from './tree.ts'
 
 export async function isDirectory(target: string): Promise<boolean> {

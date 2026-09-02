@@ -27,7 +27,7 @@ describe('kirbyferry CLI', () => {
         await fsp.readFile(path.join(directory, 'fields', '1_home', 'home.en.json'), 'utf-8'),
       ) as Record<string, unknown>
 
-      expect(exitCode).toBeUndefined()
+      expect(exitCode).toBe(0)
       expect(stderr).toContain('Extracted')
       // Only `Text` is structured – `Title` and `Uuid` need `--all`.
       expect(Object.keys(dataset)).toEqual(['Text'])
@@ -47,7 +47,7 @@ describe('kirbyferry CLI', () => {
 
       const content = await fsp.readFile(path.join(directory, 'content', '1_home', 'home.en.txt'), 'utf-8')
 
-      expect(exitCode).toBeUndefined()
+      expect(exitCode).toBe(0)
       expect(stderr).toContain('Injected')
       expect(content).toContain('<p>Goodbye</p>')
       // Untouched fields survive the rewrite.

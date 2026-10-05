@@ -32,6 +32,15 @@ describe('kirbyferry CLI', () => {
       // Only `Text` is structured – `Title` and `Uuid` need `--all`.
       expect(Object.keys(dataset)).toEqual(['Text'])
     })
+
+    it('writes into content-fields without --out', async () => {
+      const directory = createDirectory({ 'content/1_home/home.en.txt': PAGE })
+
+      const { exitCode } = await runCli(['extract', 'content'], { cwd: directory })
+
+      expect(exitCode).toBe(0)
+      await expect(fsp.access(path.join(directory, 'content-fields', '1_home', 'home.en.json'))).resolves.toBeUndefined()
+    })
   })
 
   describe('inject', () => {

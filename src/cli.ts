@@ -23,7 +23,7 @@ const sharedArgs = {
   out: {
     type: 'string',
     alias: 'o',
-    description: `Directory for extracted JSON (default: "${DEFAULT_OUT_DIR}")`,
+    description: 'Directory for extracted JSON',
     default: DEFAULT_OUT_DIR,
   },
   lang: {

@@ -3,7 +3,7 @@ import type { ExtractReport, InjectResult } from './types.ts'
 import * as path from 'node:path'
 import process from 'node:process'
 import { styleText } from 'node:util'
-import { commonArgs, defineCommand, log } from 'utilful/cli'
+import { defineCommand, log } from 'utilful/cli'
 import packageJson from '../package.json' with { type: 'json' }
 import { CONTENT_ROOT_CANDIDATES, DEFAULT_OUT_DIR } from './defaults.ts'
 import { extractFields } from './extract.ts'
@@ -15,7 +15,6 @@ function color(style: Parameters<typeof styleText>[0], text: string): string {
 }
 
 const sharedArgs = {
-  ...commonArgs,
   dir: {
     type: 'positional',
     description: `Kirby content root (default: auto-detect ${CONTENT_ROOT_CANDIDATES.map(dir => `./${dir}`).join(' or ')})`,
@@ -47,7 +46,7 @@ const sharedArgs = {
     alias: 't',
     description: 'Comma-separated template names (default: all)',
   },
-} satisfies ArgsDef
+} as const satisfies ArgsDef
 
 const extract = defineCommand({
   meta: {

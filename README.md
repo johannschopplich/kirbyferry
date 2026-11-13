@@ -83,11 +83,11 @@ Options:
 }
 ```
 
-Edit the JSON – translate it, restructure blocks, run it through tooling – then `inject` minifies each field and replaces only that field's line in the original `.txt`. Every other field (titles, YAML structures, UUIDs) is preserved exactly.
+Edit the JSON – translate it, restructure blocks, run it through tooling – then `inject` minifies each field and replaces only that field's line in the original `.txt`. Every other field (titles, YAML structures, UUIDs) is preserved exactly. `inject` replaces only fields the content file already has, so a field you add to the JSON is skipped.
 
-### Editing one language in place
+### Edit One Language in Place
 
-A common use is editing the extracted JSON for a single language – running it through a translation tool, for example – then writing it back.
+`--lang` limits both commands to the files of the given languages, for example to run German through a translation tool:
 
 ```bash
 npx kirbyferry extract --lang de        # pull existing German block content
@@ -95,12 +95,11 @@ npx kirbyferry extract --lang de        # pull existing German block content
 npx kirbyferry inject --lang de         # write it back
 ```
 
-> [!TIP]
-> Run `inject --dry-run` to preview which files and fields would change.
+Run `inject --dry-run` to preview which files and fields would change.
 
-### The whole content tree
+### Extract the Whole Content Tree
 
-By default `extract` only pulls `blocks`/`layout`. Pass `--all` to dump **every** field – text, YAML `structure`/`object`, dates, everything – into one JSON per page:
+By default `extract` only pulls `blocks`/`layout`. Pass `--all` to dump **every** field – text, YAML `structure`/`object`, dates – into one JSON per content file:
 
 ```jsonc
 // content-fields/3_projects/stube-umlauts/project.en.json
@@ -112,7 +111,7 @@ By default `extract` only pulls `blocks`/`layout`. Pass `--all` to dump **every*
 }
 ```
 
-`blocks`/`layout` are decoded to JSON; every other value stays a raw string, YAML included. Edit any of them and `inject` writes it back – blocks/layout minified, raw strings spliced in verbatim.
+`blocks`/`layout` are decoded to JSON; every other value stays a raw string, YAML included. Edit any value and `inject` writes it back – blocks/layout minified, raw strings spliced in verbatim.
 
 > [!WARNING]
 > `--all` makes structural fields like `uuid` and `sort` editable. Rewriting a `uuid` silently breaks every `page://`/`file://` reference pointing at it, and translating a `sort` corrupts ordering. When bulk-editing – especially machine translation – exclude them:
@@ -121,15 +120,18 @@ By default `extract` only pulls `blocks`/`layout`. Pass `--all` to dump **every*
 > kirbyferry extract --all --ignore uuid,sort
 > ```
 
-## Safety & limits
+## Safety & Limits
 
 kirbyferry makes two promises, depending on the field.
 
-**`blocks`/`layout` round-trip exactly.** Detected by shape, decoded to real JSON, written back in Kirby's canonical single-line form. Legacy content stored pretty-printed is normalized on inject – edited or not.
+**`blocks`/`layout` round-trip exactly.** Detected by shape, decoded to real JSON, written back in Kirby's default single-line form. Content stored pretty-printed, e.g. by a field with `pretty: true`, is collapsed to a single line on inject – edited or not.
 
 **Every other field is preserved, not parsed.** With `--all`, text, dates and `structure`/`object` YAML are carried as raw strings and written back verbatim – kirbyferry never re-encodes YAML. An untouched field is always safe; one you *edit* is not validated, so broken YAML only surfaces when Kirby reads it.
 
-`inject` is all-or-nothing: it validates every dataset first and writes nothing if any is malformed.
+`inject` is all-or-nothing: it checks every dataset and its content file first and writes nothing if any check fails. `extract` overwrites its datasets, edits not yet injected included.
+
+> [!WARNING]
+> `--clean` deletes `.json` files under `--out` that have no content file, whether `extract` wrote them or not – give `--out` a directory of its own.
 
 ## Programmatic API
 
@@ -139,6 +141,14 @@ import { extractFields, injectFields, resolveContentRoot } from 'kirbyferry'
 const contentRoot = await resolveContentRoot() // auto-detect, or pass a path
 const extractReport = await extractFields(contentRoot, { out: 'content-fields', langs: ['de'] })
 const injectResults = await injectFields(contentRoot, { out: 'content-fields', dryRun: true })
+```
+
+### `resolveContentRoot`
+
+Returns the absolute path of the content root: `contentDir` resolved against `cwd`, or the first of `content` and `storage/content` that exists there. Throws when it finds no content root. `cwd` defaults to the working directory.
+
+```ts
+function resolveContentRoot(contentDir?: string, cwd?: string): Promise<string>
 ```
 
 ### `extractFields`
@@ -178,7 +188,7 @@ interface ExtractReport {
 
 ### `injectFields`
 
-Injects edited JSON back into the matching `.txt` files. Returns one `InjectResult` per dataset, listing the fields written, the fields skipped, and whether the file changed. Throws before writing anything if a dataset is invalid or missing its target – see [Safety & limits](#safety--limits).
+Injects edited JSON back into the matching `.txt` files. Returns one `InjectResult` per dataset, listing the fields written, the fields skipped, and whether the file changed. Throws before writing anything if a dataset is invalid or missing its target – see [Safety & Limits](#safety--limits).
 
 ```ts
 function injectFields(contentRoot: string, options?: InjectOptions): Promise<InjectResult[]>

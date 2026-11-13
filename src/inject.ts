@@ -1,10 +1,11 @@
-import type { FieldMap, InjectOptions, InjectResult } from './types.ts'
+import type { InjectOptions, InjectResult } from './types.ts'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { CliError } from 'utilful/cli'
 import { DEFAULT_OUT_DIR } from './defaults.ts'
 import { decodeFields, encodeFieldValue, isWritableFieldValue, replaceField, trimKirby } from './kirby.ts'
 import { findFiles } from './utils/fs.ts'
+import { isObject } from './utils/json.ts'
 import { contentFilename, isExcluded, matchesFilter } from './utils/tree.ts'
 
 /**
@@ -30,12 +31,17 @@ export async function injectFields(
   for (const file of await findFiles(outDir, '.json', { langs, templates })) {
     const datasetPath = path.relative(outDir, file.path)
 
-    let fieldMap: FieldMap
+    let fieldMap: unknown
     try {
-      fieldMap = JSON.parse(await fsp.readFile(file.path, 'utf-8')) as FieldMap
+      fieldMap = JSON.parse(await fsp.readFile(file.path, 'utf-8'))
     }
     catch (error) {
       abortReasons.push(`Invalid JSON in ${datasetPath}: ${(error as Error).message}`)
+      continue
+    }
+
+    if (!isObject(fieldMap)) {
+      abortReasons.push(`Not a JSON object keyed by field name: ${datasetPath}`)
       continue
     }
 

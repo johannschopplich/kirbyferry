@@ -401,6 +401,14 @@ describe('injectFields', () => {
     expect(deContent).not.toContain('<p>Edited</p>')
   })
 
+  it.each(['null', '["a"]'])('aborts when a dataset holds %s instead of an object', async (json) => {
+    const { root, out } = workspace
+    await fsp.mkdir(path.join(out, 'pages', 'home'), { recursive: true })
+    await fsp.writeFile(path.join(out, 'pages', 'home', 'project.en.json'), json)
+
+    await expect(injectFields(root, { out })).rejects.toThrow(/Not a JSON object keyed by field name: .*project\.en\.json/)
+  })
+
   it('aborts without writing when an edited value is no longer blocks or layout', async () => {
     const { root, out } = workspace
     await extractFields(root, { out })

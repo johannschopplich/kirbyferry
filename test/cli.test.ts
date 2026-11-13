@@ -36,10 +36,34 @@ describe('kirbyferry CLI', () => {
     it('writes into content-fields without --out', async () => {
       const directory = createDirectory({ 'content/1_home/home.en.txt': PAGE })
 
-      const { exitCode } = await runCli(['extract', 'content'], { cwd: directory })
+      const { exitCode } = await runCli(['extract', 'content', '--clean'], { cwd: directory })
 
       expect(exitCode).toBe(0)
       await expect(fsp.access(path.join(directory, 'content-fields', '1_home', 'home.en.json'))).resolves.toBeUndefined()
+    })
+
+    it('refuses --clean when --out contains the content root', async () => {
+      const directory = createDirectory({
+        'site/content/1_home/home.en.txt': PAGE,
+        'site/composer.json': '{}',
+      })
+
+      const { stderr } = await runCli(['extract', 'site/content', '--out', 'site', '--clean'], { cwd: directory })
+
+      expect(stderr).toContain('Refusing --clean')
+      await expect(fsp.access(path.join(directory, 'site', 'composer.json'))).resolves.toBeUndefined()
+    })
+
+    it('refuses --clean when --out is the working directory', async () => {
+      const directory = createDirectory({
+        'content/1_home/home.en.txt': PAGE,
+        'tools/package.json': '{}',
+      })
+
+      const { stderr } = await runCli(['extract', '../content', '--out', '.', '--clean'], { cwd: path.join(directory, 'tools') })
+
+      expect(stderr).toContain('Refusing --clean')
+      await expect(fsp.access(path.join(directory, 'tools', 'package.json'))).resolves.toBeUndefined()
     })
   })
 

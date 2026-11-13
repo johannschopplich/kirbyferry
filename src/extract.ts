@@ -1,6 +1,8 @@
 import type { ExtractOptions, ExtractReport, ExtractResult, FieldMap, FilterOptions } from './types.ts'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
+import process from 'node:process'
+import { CliError } from 'utilful/cli'
 import { DEFAULT_OUT_DIR } from './defaults.ts'
 import { decodeFields, parseStructuredField } from './kirby.ts'
 import { fileExists, findFiles, isDirectory } from './utils/fs.ts'
@@ -17,6 +19,10 @@ export async function extractFields(
 ): Promise<ExtractReport> {
   const { out = DEFAULT_OUT_DIR, langs, fields, ignore, templates, all = false, clean = false } = options
   const outDir = path.resolve(out)
+
+  if (clean && [process.cwd(), contentRoot].some(dir => isWithin(path.resolve(dir), outDir)))
+    throw new CliError(`Refusing --clean: ${outDir} holds the working directory or the content root – give --out a directory of its own`)
+
   const results: ExtractResult[] = []
 
   for (const file of await findFiles(contentRoot, '.txt', { langs, templates })) {
@@ -84,4 +90,9 @@ async function removeStaleDatasets(
   }
 
   return cleanedDatasets
+}
+
+function isWithin(target: string, directory: string): boolean {
+  const relativePath = path.relative(directory, target)
+  return relativePath !== '..' && !relativePath.startsWith(`..${path.sep}`) && !path.isAbsolute(relativePath)
 }

@@ -42,6 +42,14 @@ describe('kirbyferry CLI', () => {
       await expect(fsp.access(path.join(directory, 'content-fields', '1_home', 'home.en.json'))).resolves.toBeUndefined()
     })
 
+    it('names the working directory as . in the success line', async () => {
+      const directory = createDirectory({ 'content/1_home/home.en.txt': PAGE })
+
+      const { stderr } = await runCli(['extract', 'content', '--out', '.'], { cwd: directory })
+
+      expect(stderr).toMatch(/to \.$/m)
+    })
+
     it('refuses --clean when --out contains the content root', async () => {
       const directory = createDirectory({
         'site/content/1_home/home.en.txt': PAGE,

@@ -159,7 +159,7 @@ function reportExtract(report: ExtractReport, out: string, all: boolean): void {
     log.warn(`Removed stale dataset: ${datasetPath}`)
 
   const total = results.reduce((sum, result) => sum + result.fields.length, 0)
-  const target = path.relative(process.cwd(), path.resolve(out))
+  const target = path.relative(process.cwd(), path.resolve(out)) || '.'
   log.success(`Extracted ${color('bold', String(total))} field(s) to ${color('cyan', target)}`)
 }
 

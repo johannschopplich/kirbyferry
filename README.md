@@ -16,8 +16,6 @@ Round-trip Kirby `blocks` and `layout` fields – or the whole content tree – 
 
 Kirby stores `blocks` and `layout` fields as a single line of minified JSON – impossible to read, diff, or translate by hand. kirbyferry pulls them into pretty-printed, per-file JSON, lets you edit them, and injects them back minified, touching nothing else. It detects fields by their value shape – no blueprint parsing, no Kirby runtime, no PHP – so it works on any Kirby site, plugins and custom field types included.
 
-Need more than blocks and layout? `extract --all` dumps **every** field. `blocks`/`layout` come out as decoded JSON; everything else – text, `structure`/`object` YAML, dates – comes out as its raw string, written back verbatim. kirbyferry never re-encodes YAML, so an untouched field is always preserved exactly.
-
 ## When to Use
 
 | I want to… | Run |
@@ -122,11 +120,9 @@ By default `extract` only pulls `blocks`/`layout`. Pass `--all` to dump **every*
 
 ## Safety & Limits
 
-kirbyferry makes two promises, depending on the field.
-
 **`blocks`/`layout` round-trip exactly.** Detected by shape, decoded to real JSON, written back in Kirby's default single-line form. Content stored pretty-printed, e.g. by a field with `pretty: true`, is collapsed to a single line on inject – edited or not.
 
-**Every other field is preserved, not parsed.** With `--all`, text, dates and `structure`/`object` YAML are carried as raw strings and written back verbatim – kirbyferry never re-encodes YAML. An untouched field is always safe; one you *edit* is not validated, so broken YAML only surfaces when Kirby reads it.
+**Every other field is preserved, not parsed.** With `--all`, it is written back verbatim as its raw string. An untouched field is always safe; one you *edit* is not validated, so broken YAML only surfaces when Kirby reads it.
 
 `inject` is all-or-nothing: it checks every dataset and its content file first and writes nothing if any check fails. `extract` overwrites its datasets, edits not yet injected included.
 
@@ -157,34 +153,9 @@ Extracts `blocks`/`layout` fields under the content root into JSON – or, with 
 
 ```ts
 function extractFields(contentRoot: string, options?: ExtractOptions): Promise<ExtractReport>
-
-interface FilterOptions {
-  /** Directory holding the extracted JSON (default: "content-fields") */
-  out?: string
-  /** Language codes to include (default: all detected) */
-  langs?: string[]
-  /** Field names to include (default: all) */
-  fields?: string[]
-  /** Field names to skip, even when otherwise in scope (e.g. uuid, sort) */
-  ignore?: string[]
-  /** Template names to include (default: all) */
-  templates?: string[]
-}
-
-interface ExtractOptions extends FilterOptions {
-  /** Extract every field, not just blocks/layout (raw strings for the rest) */
-  all?: boolean
-  /** Remove stale dataset files within the filter scope after extracting */
-  clean?: boolean
-}
-
-interface ExtractReport {
-  /** One entry per written JSON file */
-  results: ExtractResult[]
-  /** Stale dataset files removed by `clean`, relative to the output directory */
-  cleanedDatasets: string[]
-}
 ```
+
+The options are the CLI options with the same defaults: `out`, the arrays `langs`, `fields`, `ignore`, and `templates`, and the booleans `all` and `clean`. `ignore` wins over `fields`. The report holds the written files in `results` and the removed datasets in `cleanedDatasets`, relative to the output directory.
 
 ### `injectFields`
 
@@ -192,12 +163,9 @@ Injects edited JSON back into the matching `.txt` files. Returns one `InjectResu
 
 ```ts
 function injectFields(contentRoot: string, options?: InjectOptions): Promise<InjectResult[]>
-
-interface InjectOptions extends FilterOptions {
-  /** Report changes without writing files */
-  dryRun?: boolean
-}
 ```
+
+The options are those of `extractFields` without `all` and `clean`, plus `dryRun` to report changes without writing files.
 
 ## License
 

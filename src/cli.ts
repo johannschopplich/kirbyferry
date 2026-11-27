@@ -123,7 +123,9 @@ function parseList(value: string | undefined): string[] | undefined {
     return undefined
 
   const items = value.split(',').map(part => part.trim()).filter(Boolean)
-  return items.length > 0 ? items : undefined
+  return items.length > 0
+    ? items
+    : undefined
 }
 
 function header(): void {
@@ -135,7 +137,9 @@ function printTree(rows: [string, string][]): void {
   const width = Math.max(...rows.map(([label]) => label.length))
 
   for (const [i, [label, detail]] of rows.entries()) {
-    const branch = i === rows.length - 1 ? '└─' : '├─'
+    const branch = i === rows.length - 1
+      ? '└─'
+      : '├─'
     const padding = ' '.repeat(width - label.length + 2)
     process.stderr.write(`  ${color('dim', branch)} ${color('cyan', label)}${padding}${detail}\n`)
   }
@@ -151,7 +155,10 @@ function reportExtract(report: ExtractReport, out: string, all: boolean): void {
   }
 
   if (results.length > 0) {
-    printTree(results.map(result => [result.output, result.fields.join(color('dim', ', '))]))
+    printTree(results.map(result => [
+      result.output,
+      result.fields.join(color('dim', ', ')),
+    ]))
     log.blankLine()
   }
 
@@ -177,7 +184,10 @@ function reportInject(results: InjectResult[], dryRun: boolean): void {
   }
 
   if (changedFiles.length > 0) {
-    printTree(changedFiles.map(result => [result.target, result.fields.join(color('dim', ', '))]))
+    printTree(changedFiles.map(result => [
+      result.target,
+      result.fields.join(color('dim', ', ')),
+    ]))
     log.blankLine()
   }
 

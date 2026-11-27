@@ -20,8 +20,12 @@ export async function extractFields(
   const { out = DEFAULT_OUT_DIR, langs, fields, ignore, templates, all = false, clean = false } = options
   const outDir = path.resolve(out)
 
-  if (clean && [process.cwd(), contentRoot].some(dir => isWithin(path.resolve(dir), outDir)))
+  if (clean && [
+    process.cwd(),
+    contentRoot,
+  ].some(dir => isWithin(path.resolve(dir), outDir))) {
     throw new CliError(`Refusing --clean: ${outDir} holds the working directory or the content root – give --out a directory of its own`)
+  }
 
   const results: ExtractResult[] = []
 

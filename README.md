@@ -135,7 +135,10 @@ By default `extract` only pulls `blocks`/`layout`. Pass `--all` to dump **every*
 import { extractFields, injectFields, resolveContentRoot } from 'kirbyferry'
 
 const contentRoot = await resolveContentRoot() // auto-detect, or pass a path
-const extractReport = await extractFields(contentRoot, { out: 'content-fields', langs: ['de'] })
+const extractReport = await extractFields(contentRoot, {
+  out: 'content-fields',
+  langs: ['de']
+})
 const injectResults = await injectFields(contentRoot, { out: 'content-fields', dryRun: true })
 ```
 

@@ -21,7 +21,12 @@ describe('kirbyferry CLI', () => {
     it('extracts only structured fields into a mirrored dataset', async () => {
       const directory = createDirectory({ 'content/1_home/home.en.txt': PAGE })
 
-      const { stderr, exitCode } = await runCli(['extract', 'content', '--out', 'fields'], { cwd: directory })
+      const { stderr, exitCode } = await runCli([
+        'extract',
+        'content',
+        '--out',
+        'fields',
+      ], { cwd: directory })
 
       const dataset = JSON.parse(
         await fsp.readFile(path.join(directory, 'fields', '1_home', 'home.en.json'), 'utf-8'),
@@ -56,7 +61,13 @@ describe('kirbyferry CLI', () => {
         'site/composer.json': '{}',
       })
 
-      const { stderr } = await runCli(['extract', 'site/content', '--out', 'site', '--clean'], { cwd: directory })
+      const { stderr } = await runCli([
+        'extract',
+        'site/content',
+        '--out',
+        'site',
+        '--clean',
+      ], { cwd: directory })
 
       expect(stderr).toContain('Refusing --clean')
       await expect(fsp.access(path.join(directory, 'site', 'composer.json'))).resolves.toBeUndefined()
@@ -68,7 +79,15 @@ describe('kirbyferry CLI', () => {
         'tools/package.json': '{}',
       })
 
-      const { stderr } = await runCli(['extract', '../content', '--out', '.', '--clean'], { cwd: path.join(directory, 'tools') })
+      const { stderr } = await runCli([
+        'extract',
+        '../content',
+        '--out',
+        '.',
+        '--clean',
+      ], {
+        cwd: path.join(directory, 'tools'),
+      })
 
       expect(stderr).toContain('Refusing --clean')
       await expect(fsp.access(path.join(directory, 'tools', 'package.json'))).resolves.toBeUndefined()
@@ -80,7 +99,14 @@ describe('kirbyferry CLI', () => {
       const directory = createDirectory({
         'content/1_home/home.en.txt': PAGE,
         'fields/1_home/home.en.json': JSON.stringify({
-          Text: [{ content: { text: '<p>Goodbye</p>' }, id: 'a1', isHidden: false, type: 'text' }],
+          Text: [
+            {
+              content: { text: '<p>Goodbye</p>' },
+              id: 'a1',
+              isHidden: false,
+              type: 'text',
+            },
+          ],
         }),
       })
 

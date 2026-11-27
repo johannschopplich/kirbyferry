@@ -64,7 +64,10 @@ describe('content tree round-trip', () => {
     ;(dataset.Text![0] as unknown as { content: { text: string } }).content.text = 'Edited Chapter'
     await fsp.writeFile(datasetPath, JSON.stringify(dataset, undefined, 2))
 
-    const injectResults = await injectFields(root, { out, langs: ['en'] })
+    const injectResults = await injectFields(root, {
+      out,
+      langs: ['en'],
+    })
     const articleResult = injectResults.find(result => result.target === articlePath)
     expect(articleResult?.hasChanged).toBe(true)
 

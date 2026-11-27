@@ -91,9 +91,18 @@ describe('parseStructuredField', () => {
   })
 
   it.each([
-    { kind: 'YAML structure fields', field: decodeFields(SAMPLE_PAGE).find(field => field.name === 'Footerlinks')! },
-    { kind: 'scalars', field: { name: 'Uuid', value: 'abc123' } },
-    { kind: 'empty arrays', field: { name: 'Empty', value: '[]' } },
+    {
+      kind: 'YAML structure fields',
+      field: decodeFields(SAMPLE_PAGE).find(field => field.name === 'Footerlinks')!,
+    },
+    {
+      kind: 'scalars',
+      field: { name: 'Uuid', value: 'abc123' },
+    },
+    {
+      kind: 'empty arrays',
+      field: { name: 'Empty', value: '[]' },
+    },
   ])('ignores $kind', ({ field }) => {
     expect(parseStructuredField(field)).toBeUndefined()
   })
@@ -102,18 +111,52 @@ describe('parseStructuredField', () => {
 describe('isStructuredFieldValue', () => {
   it.each([
     { kind: 'an empty array', value: [] },
-    { kind: 'a blocks array', value: [{ id: 'a1', type: 'text', content: {}, isHidden: false }] },
-    { kind: 'a layout array', value: [{ id: 'l1', columns: [] }] },
+    {
+      kind: 'a blocks array',
+      value: [
+        {
+          id: 'a1',
+          type: 'text',
+          content: {},
+          isHidden: false,
+        },
+      ],
+    },
+    {
+      kind: 'a layout array',
+      value: [
+        { id: 'l1', columns: [] },
+      ],
+    },
   ])('accepts $kind', ({ value }) => {
     expect(isStructuredFieldValue(value)).toBe(true)
   })
 
   it.each([
     { kind: 'a scalar', value: 'text' },
-    { kind: 'a plain object', value: { id: 'a1' } },
-    { kind: 'an array of non-blocks', value: [{ foo: 1 }] },
-    { kind: 'a block missing its content', value: [{ id: 'a1', type: 'text' }] },
-    { kind: 'a mixed blocks/layout array', value: [{ id: 'a1', type: 'text', content: {} }, { id: 'l1', columns: [] }] },
+    {
+      kind: 'a plain object',
+      value: { id: 'a1' },
+    },
+    {
+      kind: 'an array of non-blocks',
+      value: [
+        { foo: 1 },
+      ],
+    },
+    {
+      kind: 'a block missing its content',
+      value: [
+        { id: 'a1', type: 'text' },
+      ],
+    },
+    {
+      kind: 'a mixed blocks/layout array',
+      value: [
+        { id: 'a1', type: 'text', content: {} },
+        { id: 'l1', columns: [] },
+      ],
+    },
   ])('rejects $kind', ({ value }) => {
     expect(isStructuredFieldValue(value)).toBe(false)
   })
@@ -123,8 +166,23 @@ describe('isWritableFieldValue', () => {
   it.each([
     { kind: 'a raw string', value: 'a plain value' },
     { kind: 'an empty string', value: '' },
-    { kind: 'a blocks array', value: [{ id: 'a1', type: 'text', content: {}, isHidden: false }] },
-    { kind: 'a layout array', value: [{ id: 'l1', columns: [] }] },
+    {
+      kind: 'a blocks array',
+      value: [
+        {
+          id: 'a1',
+          type: 'text',
+          content: {},
+          isHidden: false,
+        },
+      ],
+    },
+    {
+      kind: 'a layout array',
+      value: [
+        { id: 'l1', columns: [] },
+      ],
+    },
   ])('accepts $kind', ({ value }) => {
     expect(isWritableFieldValue(value)).toBe(true)
   })
@@ -133,7 +191,10 @@ describe('isWritableFieldValue', () => {
     { kind: 'a number', value: 3 },
     { kind: 'a boolean', value: true },
     { kind: 'null', value: null },
-    { kind: 'a plain object', value: { id: 'a1' } },
+    {
+      kind: 'a plain object',
+      value: { id: 'a1' },
+    },
   ])('rejects $kind', ({ value }) => {
     expect(isWritableFieldValue(value)).toBe(false)
   })
@@ -141,7 +202,11 @@ describe('isWritableFieldValue', () => {
 
 describe('encodeFieldValue', () => {
   it('escapes U+2028/U+2029 so the value stays on a single line', () => {
-    const encodedValue = encodeFieldValue([{ content: { text: `a${LINE_SEPARATOR}b${PARAGRAPH_SEPARATOR}c` } }])
+    const encodedValue = encodeFieldValue([
+      {
+        content: { text: `a${LINE_SEPARATOR}b${PARAGRAPH_SEPARATOR}c` },
+      },
+    ])
     expect(encodedValue).toContain('\\u2028')
     expect(encodedValue).toContain('\\u2029')
     expect(encodedValue).not.toContain(LINE_SEPARATOR)
@@ -155,9 +220,18 @@ describe('encodeFieldValue', () => {
 
 describe('parseFilename', () => {
   it.each([
-    { filename: 'project.en.txt', expected: { template: 'project', lang: 'en' } },
-    { filename: 'project.en-us.json', expected: { template: 'project', lang: 'en-us' } },
-    { filename: 'default.txt', expected: { template: 'default' } },
+    {
+      filename: 'project.en.txt',
+      expected: { template: 'project', lang: 'en' },
+    },
+    {
+      filename: 'project.en-us.json',
+      expected: { template: 'project', lang: 'en-us' },
+    },
+    {
+      filename: 'default.txt',
+      expected: { template: 'default' },
+    },
   ])('parses $filename', ({ filename, expected }) => {
     expect(parseFilename(filename)).toEqual(expected)
   })
@@ -255,14 +329,20 @@ describe('extractFields', () => {
 
   it('restricts extraction to the requested language', async () => {
     const { root, out } = workspace
-    const { results } = await extractFields(root, { out, langs: ['en'] })
+    const { results } = await extractFields(root, {
+      out,
+      langs: ['en'],
+    })
     expect(results).toHaveLength(1)
     expect(results[0]!.source).toContain('project.en.txt')
   })
 
   it('matches the field filter case-insensitively', async () => {
     const { root, out } = workspace
-    const { results } = await extractFields(root, { out, fields: ['text'] })
+    const { results } = await extractFields(root, {
+      out,
+      fields: ['text'],
+    })
     expect(results).toHaveLength(2)
     expect(results[0]!.fields).toEqual(['Text'])
   })
@@ -287,8 +367,14 @@ describe('extractFields', () => {
       await extractFields(root, { out })
       await fsp.rm(path.join(root, 'pages', 'home', 'project.de.txt'))
 
-      const { cleanedDatasets } = await extractFields(root, { out, langs: ['de'], clean: true })
-      expect(cleanedDatasets).toEqual([path.join('pages', 'home', 'project.de.json')])
+      const { cleanedDatasets } = await extractFields(root, {
+        out,
+        langs: ['de'],
+        clean: true,
+      })
+      expect(cleanedDatasets).toEqual([
+        path.join('pages', 'home', 'project.de.json'),
+      ])
       await expect(fsp.access(path.join(out, 'pages', 'home', 'project.en.json'))).resolves.toBeUndefined()
     })
 
@@ -330,7 +416,10 @@ describe('injectFields', () => {
     ;(dataset.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
     await fsp.writeFile(jsonPath, JSON.stringify(dataset, undefined, 2))
 
-    const results = await injectFields(root, { out, langs: ['en'] })
+    const results = await injectFields(root, {
+      out,
+      langs: ['en'],
+    })
     expect(results[0]!.hasChanged).toBe(true)
     expect(results[0]!.fields).toEqual(['Text'])
 
@@ -351,7 +440,11 @@ describe('injectFields', () => {
     ;(dataset.Text![0] as unknown as { content: { text: string } }).content.text = '<p>Edited</p>'
     await fsp.writeFile(jsonPath, JSON.stringify(dataset, undefined, 2))
 
-    const results = await injectFields(root, { out, langs: ['en'], dryRun: true })
+    const results = await injectFields(root, {
+      out,
+      langs: ['en'],
+      dryRun: true,
+    })
     expect(results[0]!.hasChanged).toBe(true)
 
     const untouchedContent = await fsp.readFile(path.join(root, 'pages', 'home', 'project.en.txt'), 'utf-8')
@@ -363,10 +456,20 @@ describe('injectFields', () => {
     const jsonPath = path.join(out, 'pages', 'home', 'project.en.json')
     await fsp.mkdir(path.dirname(jsonPath), { recursive: true })
     await fsp.writeFile(jsonPath, JSON.stringify({
-      text: [{ id: 'a1', type: 'text', content: { text: '<p>Edited</p>' }, isHidden: false }],
+      text: [
+        {
+          id: 'a1',
+          type: 'text',
+          content: { text: '<p>Edited</p>' },
+          isHidden: false,
+        },
+      ],
     }))
 
-    const results = await injectFields(root, { out, langs: ['en'] })
+    const results = await injectFields(root, {
+      out,
+      langs: ['en'],
+    })
     expect(results[0]!.skippedFields).toEqual(['text'])
     expect(results[0]!.hasChanged).toBe(false)
   })
@@ -378,7 +481,10 @@ describe('injectFields', () => {
     const jsonPath = path.join(out, 'pages', 'home', 'project.en.json')
     await fsp.writeFile(jsonPath, JSON.stringify({ Text: [] }))
 
-    const results = await injectFields(root, { out, langs: ['en'] })
+    const results = await injectFields(root, {
+      out,
+      langs: ['en'],
+    })
     expect(results[0]!.hasChanged).toBe(true)
 
     const updatedContent = await fsp.readFile(path.join(root, 'pages', 'home', 'project.en.txt'), 'utf-8')
@@ -419,7 +525,11 @@ describe('injectFields', () => {
     await fsp.writeFile(dePath, JSON.stringify(dataset))
     await fsp.writeFile(
       path.join(out, 'pages', 'home', 'project.en.json'),
-      JSON.stringify({ Text: [{ foo: 1 }] }),
+      JSON.stringify({
+        Text: [
+          { foo: 1 },
+        ],
+      }),
     )
 
     await expect(injectFields(root, { out })).rejects.toThrow(/unsupported value in .*project\.en\.json.*Text/i)
@@ -444,7 +554,10 @@ describe('injectFields', () => {
     const txtPath = path.join(root, 'pages', 'home', 'project.en.txt')
     const before = await fsp.readFile(txtPath, 'utf-8')
 
-    await expect(injectFields(root, { out, langs: ['en'] })).rejects.toThrow(/no content file/i)
+    await expect(injectFields(root, {
+      out,
+      langs: ['en'],
+    })).rejects.toThrow(/no content file/i)
     // Atomic: the valid page is left untouched despite its pending edit.
     expect(await fsp.readFile(txtPath, 'utf-8')).toBe(before)
   })
@@ -556,7 +669,15 @@ describe('whole tree (all fields)', () => {
     const { root, out } = workspace
     const { results } = await extractFields(root, { out, all: true })
 
-    expect(results[0]!.fields).toEqual(['Title', 'Text', 'Body', 'Links', 'Meta', 'Empty', 'Uuid'])
+    expect(results[0]!.fields).toEqual([
+      'Title',
+      'Text',
+      'Body',
+      'Links',
+      'Meta',
+      'Empty',
+      'Uuid',
+    ])
 
     const dataset = await readDataset(out)
     expect(Array.isArray(dataset.Text)).toBe(true)
@@ -677,8 +798,18 @@ describe('whole tree (all fields)', () => {
 
   it('skips ignored fields on extract and on inject', async () => {
     const { root, out } = workspace
-    const { results } = await extractFields(root, { out, all: true, ignore: ['uuid', 'empty'] })
-    expect(results[0]!.fields).toEqual(['Title', 'Text', 'Body', 'Links', 'Meta'])
+    const { results } = await extractFields(root, {
+      out,
+      all: true,
+      ignore: ['uuid', 'empty'],
+    })
+    expect(results[0]!.fields).toEqual([
+      'Title',
+      'Text',
+      'Body',
+      'Links',
+      'Meta',
+    ])
 
     // Re-extract everything, then edit both Title and Uuid, but ignore Uuid on inject.
     await extractFields(root, { out, all: true })
@@ -687,7 +818,10 @@ describe('whole tree (all fields)', () => {
     dataset.Uuid = 'edited-uuid'
     await fsp.writeFile(path.join(out, datasetPath), JSON.stringify(dataset))
 
-    const injectResults = await injectFields(root, { out, ignore: ['uuid'] })
+    const injectResults = await injectFields(root, {
+      out,
+      ignore: ['uuid'],
+    })
     expect(injectResults[0]!.fields).toEqual(['Title'])
 
     const content = await fsp.readFile(path.join(root, pagePath), 'utf-8')

@@ -111,7 +111,9 @@ export function replaceField(content: string, name: string, value: string): stri
   }
 
   const rewrittenChunk = replaceChunkValue(content.slice(chunkStart), name, value)
-  return rewrittenChunk === undefined ? undefined : content.slice(0, chunkStart) + rewrittenChunk
+  return rewrittenChunk === undefined
+    ? undefined
+    : content.slice(0, chunkStart) + rewrittenChunk
 }
 
 /**
@@ -131,10 +133,14 @@ function replaceChunkValue(chunk: string, name: string, value: string): string |
   // multi-line field both normalize the way Kirby's trim-on-encode would.
   const trailingWhitespace = /\s*$/.exec(chunk.slice(colonIndex + 1))![0]
   const lineBreak = LINE_BREAK.exec(trailingWhitespace)
-  const terminator = lineBreak ? trailingWhitespace.slice(lineBreak.index) : ''
+  const terminator = lineBreak
+    ? trailingWhitespace.slice(lineBreak.index)
+    : ''
 
   const escapedValue = trimKirby(value).replace(UNESCAPED_DIVIDER, '\\----')
-  const framing = LINE_BREAK.test(escapedValue) ? '\n\n' : ' '
+  const framing = LINE_BREAK.test(escapedValue)
+    ? '\n\n'
+    : ' '
   return `${chunk.slice(0, colonIndex + 1)}${framing}${escapedValue}${terminator}`
 }
 

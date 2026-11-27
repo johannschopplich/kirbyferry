@@ -90,7 +90,9 @@ export async function injectFields(
       if (!isInScope(name))
         continue
 
-      const encodedValue = typeof fieldValue === 'string' ? fieldValue : encodeFieldValue(fieldValue)
+      const encodedValue = typeof fieldValue === 'string'
+        ? fieldValue
+        : encodeFieldValue(fieldValue)
 
       if (storedValues.get(name) === trimKirby(encodedValue))
         continue
